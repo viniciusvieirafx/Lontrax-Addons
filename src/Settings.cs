@@ -14,10 +14,6 @@ sealed class Settings
     /// <summary>Closing the window keeps the app next to the clock, checking for updates.</summary>
     public bool KeepInTray { get; set; } = true;
     public bool StartWithWindows { get; set; } = true;
-    /// <summary>Plays the opening fanfare (or the person's own sound) when the window opens.</summary>
-    public bool PlaySound { get; set; } = true;
-    /// <summary>File name (inside the app's ui folder) of a sound the person picked; null = the fanfare.</summary>
-    public string? CustomSound { get; set; }
     /// <summary>Last version (commit) we already told the person about, per addon id.</summary>
     public Dictionary<string, string> Notified { get; set; } = new();
 

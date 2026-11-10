@@ -62,31 +62,28 @@ sealed class MainForm : Form
         ApplyAutostart();
     }
 
-    /// <summary>Opening sound: only when the person opens the window (not when it starts hidden with Windows).</summary>
-    void PlayIntro()
-    {
-        if (settings.PlaySound) PlaySoundNow();
-    }
+    // ---------- dark title bar (instead of the default white one) ----------
+    [System.Runtime.InteropServices.DllImport("dwmapi.dll")]
+    static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
 
-    System.Media.SoundPlayer? player;
-
-    /// <summary>WAV (the fanfare) plays through Windows itself: never blocked by the page's autoplay rules.
-    /// Other formats (mp3/ogg someone picked) play through the page.</summary>
-    void PlaySoundNow()
+    protected override void OnHandleCreated(EventArgs e)
     {
-        var file = Path.Combine(Config.DataDir, "ui", SoundFile());
-        if (file.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) && File.Exists(file))
+        base.OnHandleCreated(e);
+        try
         {
-            try
-            {
-                player?.Stop();
-                player = new System.Media.SoundPlayer(file);
-                player.Play();
-                return;
-            }
-            catch (Exception ex) { LogError("sound", ex); }
+            int on = 1;
+            // Windows 10 (20H1+) and 11: dark title bar.
+            if (DwmSetWindowAttribute(Handle, 20, ref on, sizeof(int)) != 0)
+                DwmSetWindowAttribute(Handle, 19, ref on, sizeof(int)); // older Windows 10 builds
+            // Windows 11: exact colors (COLORREF = 0x00BBGGRR). Same near-black navy as the app.
+            int caption = 0x001F0D07;   // #070D1F
+            int text = 0x00D2E3E9;      // #E9E3D2
+            int border = 0x00231A0D;    // #0D1A23
+            DwmSetWindowAttribute(Handle, 35, ref caption, sizeof(int));
+            DwmSetWindowAttribute(Handle, 36, ref text, sizeof(int));
+            DwmSetWindowAttribute(Handle, 34, ref border, sizeof(int));
         }
-        Post(new { type = "playSound" });
+        catch { }
     }
 
     void ShowWindow()
@@ -96,7 +93,6 @@ sealed class MainForm : Form
         Activate();
         SendState();
         SendAddons();
-        PlayIntro();
     }
 
     protected override void OnFormClosing(FormClosingEventArgs e)
@@ -168,8 +164,7 @@ sealed class MainForm : Form
         try
         {
             var uiDir = ExtractUi();
-            var env = await CoreWebView2Environment.CreateAsync(null, Path.Combine(Config.DataDir, "webview"),
-                new CoreWebView2EnvironmentOptions("--autoplay-policy=no-user-gesture-required"));
+            var env = await CoreWebView2Environment.CreateAsync(null, Path.Combine(Config.DataDir, "webview"));
             await web.EnsureCoreWebView2Async(env);
             var core = web.CoreWebView2;
             core.Settings.AreDevToolsEnabled = Debugger.IsAttached;
@@ -190,37 +185,12 @@ sealed class MainForm : Form
         }
     }
 
-    string SoundFile()
-    {
-        var c = settings.CustomSound;
-        return c != null && File.Exists(Path.Combine(Config.DataDir, "ui", c)) ? c : "fanfarra.wav";
-    }
-
-    void PickSound()
-    {
-        using var dlg = new OpenFileDialog
-        {
-            Title = "Escolha o som de abertura",
-            Filter = "Áudio (*.ogg;*.mp3;*.wav;*.m4a)|*.ogg;*.mp3;*.wav;*.m4a",
-        };
-        if (dlg.ShowDialog(this) != DialogResult.OK) return;
-        var info = new FileInfo(dlg.FileName);
-        if (info.Length > 10 * 1024 * 1024) { Toast("erro", "Esse arquivo é muito grande (máximo 10 MB)."); return; }
-        var ui = Path.Combine(Config.DataDir, "ui");
-        foreach (var old in Directory.GetFiles(ui, "som-personalizado.*")) File.Delete(old);
-        var name = "som-personalizado" + info.Extension.ToLowerInvariant();
-        File.Copy(dlg.FileName, Path.Combine(ui, name), true);
-        settings.CustomSound = name;
-        settings.PlaySound = true;
-        settings.Save();
-        SendState();
-        PlaySoundNow();
-    }
-
     static string ExtractUi()
     {
         var dir = Path.Combine(Config.DataDir, "ui");
         Directory.CreateDirectory(dir);
+        // Start clean: files from older versions (e.g. the old opening sound) don't stay behind.
+        foreach (var old in Directory.GetFiles(dir)) try { File.Delete(old); } catch { }
         var asm = Assembly.GetExecutingAssembly();
         foreach (var name in asm.GetManifestResourceNames().Where(n => n.StartsWith("ui.")))
         {
@@ -246,7 +216,7 @@ sealed class MainForm : Form
                     if (gh.Token != null)
                     {
                         if (startHidden) await BackgroundCheck(false); // started with Windows: just notify
-                        else { PlayIntro(); await RefreshCatalog(); }
+                        else await RefreshCatalog();
                     }
                     break;
                 case "login": await Login(); break;
@@ -257,15 +227,11 @@ sealed class MainForm : Form
                 case "updateAll": await UpdateAll(); break;
                 case "uninstall": Uninstall((string)m!["id"]!); break;
                 case "pickFolder": PickFolder(); break;
-                case "pickSound": PickSound(); break;
-                case "resetSound": settings.CustomSound = null; settings.Save(); SendState(); PlaySoundNow(); break;
-                case "testSound": PlaySoundNow(); break;
                 case "setOption":
                     var opt = (string?)m!["name"];
                     var on = (bool?)m["value"] ?? false;
                     if (opt == "autostart") { settings.StartWithWindows = on; ApplyAutostart(); }
                     if (opt == "tray") settings.KeepInTray = on;
-                    if (opt == "sound") settings.PlaySound = on;
                     settings.Save();
                     SendState();
                     break;
@@ -303,9 +269,6 @@ sealed class MainForm : Form
             configured = !Config.GitHubClientId.StartsWith("COLOQUE") || Environment.GetEnvironmentVariable("LONTRAX_TOKEN") != null,
             version = Application.ProductVersion.Split('+')[0],
             autostart = settings.StartWithWindows,
-            playSound = settings.PlaySound,
-            soundFile = SoundFile(),
-            customSound = settings.CustomSound != null,
             keepInTray = settings.KeepInTray,
         });
     }
@@ -358,7 +321,6 @@ sealed class MainForm : Form
         }
         catch (Exception ex) { LogError("user", ex); }
         Toast("ok", $"Bem-vindo, {settings.Login ?? "herói"}! Pela Aliança!");
-        PlayIntro();
         SendState();
         await RefreshCatalog();
     }

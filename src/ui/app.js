@@ -51,14 +51,6 @@
     }
     $("wow-warning").hidden = !state.wowRunning;
     $("version").textContent = "v" + (state.version || "");
-    const on = state.playSound !== false;
-    const sb = $("btn-sound");
-    sb.setAttribute("aria-pressed", on ? "true" : "false");
-    sb.querySelector(".sound-icon").textContent = on ? "🔊" : "🔇";
-    sb.querySelector(".sound-label").textContent = on ? "Som ligado" : "Som desligado";
-    sb.title = on ? "Som de abertura: ligado (clique para desligar)" : "Som de abertura: desligado (clique para ligar)";
-    $("sound-name").textContent = state.customSound ? "seu som" : "Fanfarra Lontrax";
-    $("btn-reset-sound").hidden = !state.customSound;
     $("opt-autostart").checked = state.autostart !== false;
     $("opt-tray").checked = state.keepInTray !== false;
   }
@@ -137,15 +129,32 @@
     $("foot-text").textContent = items.length ? `${ok} de ${items.length} addons em dia · Pela Aliança!` : "Pela Aliança!";
   }
 
-  let audio = null;
-  function playSound() {
+  // Soft click for buttons inside the app (made on the fly, no sound file).
+  let actx = null;
+  function softClick() {
     try {
-      if (audio) audio.pause();
-      audio = new Audio((state.soundFile || "fanfarra.wav") + "?t=" + Date.now());
-      audio.volume = 0.8;
-      audio.play().catch(() => {});
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      const t = actx.currentTime;
+      const osc = actx.createOscillator();
+      const gain = actx.createGain();
+      const filter = actx.createBiquadFilter();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(1400, t);
+      osc.frequency.exponentialRampToValueAtTime(600, t + 0.04);
+      filter.type = "lowpass";
+      filter.frequency.value = 2500;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.05, t + 0.004);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+      osc.connect(filter).connect(gain).connect(actx.destination);
+      osc.start(t);
+      osc.stop(t + 0.07);
     } catch (e) {}
   }
+  document.addEventListener("pointerdown", (e) => {
+    const el = e.target.closest("button, .link, .opt, .code");
+    if (el && !el.disabled) softClick();
+  });
 
   function setBusy(on) {
     document.querySelectorAll(".main-btn, #btn-update-all, #btn-refresh").forEach((b) => (b.disabled = on));
@@ -194,9 +203,6 @@
         case "toast":
           toast(m.kind, m.text);
           break;
-        case "playSound":
-          playSound();
-          break;
       }
     });
 
@@ -218,15 +224,6 @@
   $("btn-update-all").addEventListener("click", () => send("updateAll"));
   $("btn-pick").addEventListener("click", () => send("pickFolder"));
   $("path-value").addEventListener("click", () => send("openFolder"));
-  $("btn-sound").addEventListener("click", () => {
-    const on = $("btn-sound").getAttribute("aria-pressed") !== "true";
-    send("setOption", { name: "sound", value: on });
-    toast("ok", on ? "Som de abertura ligado." : "Som de abertura desligado.");
-    if (!host) { state.playSound = on; renderState(); }
-  });
-  $("btn-test-sound").addEventListener("click", () => (host ? send("testSound") : playSound()));
-  $("btn-pick-sound").addEventListener("click", () => send("pickSound"));
-  $("btn-reset-sound").addEventListener("click", () => send("resetSound"));
   $("opt-autostart").addEventListener("change", (e) => send("setOption", { name: "autostart", value: e.target.checked }));
   $("opt-tray").addEventListener("change", (e) => send("setOption", { name: "tray", value: e.target.checked }));
 

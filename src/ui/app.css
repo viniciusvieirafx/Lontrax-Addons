@@ -229,19 +229,6 @@ code { font-family: Consolas, monospace; color: var(--gold-hi); }
 .foot { display: flex; justify-content: space-between; padding: 8px 28px 12px; color: var(--muted); font: 600 11px var(--serif); letter-spacing: .2em; text-transform: uppercase; border-top: 1px solid rgba(217,180,90,.15); }
 
 .opts { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; justify-content: flex-end; }
-.sound-opts { cursor: default; }
-.sound-opts .link { padding: 0 2px; }
-#sound-name { color: var(--gold-hi); }
-.sound-toggle {
-  display: inline-flex; align-items: center; gap: 8px; margin-right: 6px; cursor: pointer;
-  padding: 8px 14px; border-radius: 999px; font: 700 12px var(--serif); letter-spacing: .1em; text-transform: uppercase;
-  color: var(--gold-hi); background: rgba(13,27,63,.7); border: 1px solid rgba(217,180,90,.5);
-  transition: background .15s, color .15s;
-}
-.sound-toggle:hover { background: rgba(31,63,148,.5); }
-.sound-toggle:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 3px; }
-.sound-toggle .sound-icon { font-size: 16px; }
-.sound-toggle[aria-pressed="false"] { color: var(--muted); border-color: rgba(167,176,200,.35); }
 .opt { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; text-transform: none; letter-spacing: .02em; font: 600 13px var(--sans); color: var(--muted); }
 .opt input { accent-color: var(--gold); width: 15px; height: 15px; cursor: pointer; }
 .opt:hover { color: var(--gold-hi); }
