@@ -35,6 +35,7 @@
     <EmbeddedResource Include="ui\app.js" LogicalName="ui.app.js" />
     <EmbeddedResource Include="..\assets\brasao.png" LogicalName="ui.brasao.png" />
     <EmbeddedResource Include="..\assets\brasao.ico" LogicalName="ui.brasao.ico" />
+    <EmbeddedResource Include="..\assets\fanfarra.wav" LogicalName="ui.fanfarra.wav" />
   </ItemGroup>
 
 </Project>
