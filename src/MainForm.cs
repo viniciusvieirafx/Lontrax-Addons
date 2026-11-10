@@ -65,7 +65,28 @@ sealed class MainForm : Form
     /// <summary>Opening sound: only when the person opens the window (not when it starts hidden with Windows).</summary>
     void PlayIntro()
     {
-        if (settings.PlaySound) Post(new { type = "playSound" });
+        if (settings.PlaySound) PlaySoundNow();
+    }
+
+    System.Media.SoundPlayer? player;
+
+    /// <summary>WAV (the fanfare) plays through Windows itself: never blocked by the page's autoplay rules.
+    /// Other formats (mp3/ogg someone picked) play through the page.</summary>
+    void PlaySoundNow()
+    {
+        var file = Path.Combine(Config.DataDir, "ui", SoundFile());
+        if (file.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) && File.Exists(file))
+        {
+            try
+            {
+                player?.Stop();
+                player = new System.Media.SoundPlayer(file);
+                player.Play();
+                return;
+            }
+            catch (Exception ex) { LogError("sound", ex); }
+        }
+        Post(new { type = "playSound" });
     }
 
     void ShowWindow()
@@ -193,7 +214,7 @@ sealed class MainForm : Form
         settings.PlaySound = true;
         settings.Save();
         SendState();
-        Post(new { type = "playSound" });
+        PlaySoundNow();
     }
 
     static string ExtractUi()
@@ -237,8 +258,8 @@ sealed class MainForm : Form
                 case "uninstall": Uninstall((string)m!["id"]!); break;
                 case "pickFolder": PickFolder(); break;
                 case "pickSound": PickSound(); break;
-                case "resetSound": settings.CustomSound = null; settings.Save(); SendState(); Post(new { type = "playSound" }); break;
-                case "testSound": Post(new { type = "playSound" }); break;
+                case "resetSound": settings.CustomSound = null; settings.Save(); SendState(); PlaySoundNow(); break;
+                case "testSound": PlaySoundNow(); break;
                 case "setOption":
                     var opt = (string?)m!["name"];
                     var on = (bool?)m["value"] ?? false;
@@ -337,6 +358,7 @@ sealed class MainForm : Form
         }
         catch (Exception ex) { LogError("user", ex); }
         Toast("ok", $"Bem-vindo, {settings.Login ?? "herói"}! Pela Aliança!");
+        PlayIntro();
         SendState();
         await RefreshCatalog();
     }
