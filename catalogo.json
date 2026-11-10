@@ -10,8 +10,25 @@
       "ref": "main",
       "pasta": "MFNameplates",
       "autor": "Marcelian & Flame + Lontrax",
-      "tags": ["Placas de nome", "Interface"],
+      "tags": [
+        "Placas de nome",
+        "Interface"
+      ],
       "obrigatorio": true
+    },
+    {
+      "id": "zsbt",
+      "nome": "ZSBT - Texto de combate (galera)",
+      "descricao": "Números de dano e cura subindo na tela (Zore's Scrolling Battle Text) com o visual do MF: janelas escuras, fontes e bordas do MF e a fonte MF Express nos números.",
+      "repo": "viniciusvieirafx/ZSBT-amigos",
+      "ref": "main",
+      "pasta": "ZSBT",
+      "autor": "Zorellion + Lontrax",
+      "tags": [
+        "Combate",
+        "Interface"
+      ],
+      "obrigatorio": false
     }
   ]
 }
