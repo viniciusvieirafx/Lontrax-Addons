@@ -256,4 +256,30 @@ code { font-family: Consolas, monospace; color: var(--gold-hi); }
 .toast.erro { border-left-color: var(--bad); }
 .toast.ok { border-left-color: var(--ok); }
 
+/* Lontrinha de armadura: pixel art 28x28, 4 quadros por animação, ampliada 3x sem borrar */
+/* lives in the header's empty space, left of the user name: never covers the cards */
+.mascot { position: fixed; top: 4px; right: 230px; z-index: 9; display: flex; flex-direction: row-reverse; align-items: center; gap: 8px; pointer-events: none; }
+.mascot-sprite {
+  width: 84px; height: 84px; pointer-events: auto; cursor: pointer;
+  image-rendering: pixelated; background-repeat: no-repeat; background-size: 336px 84px;
+  filter: drop-shadow(0 6px 8px rgba(0,0,0,.55));
+}
+.mascot-sprite.parada { background-image: url("lontrinha-parada.png"); animation: sprite4 2s steps(4) infinite; }
+.mascot-sprite.avisando { background-image: url("lontrinha-avisando.png"); animation: sprite4 .88s steps(4) infinite; }
+.mascot-sprite.trabalhando { background-image: url("lontrinha-trabalhando.png"); animation: sprite4 .6s steps(4) infinite; }
+.mascot-sprite.comemorando { background-image: url("lontrinha-comemorando.png"); animation: sprite4 .52s steps(4) infinite; }
+@keyframes sprite4 { from { background-position: 0 0; } to { background-position: -336px 0; } }
+.mascot-bubble {
+  position: relative; max-width: 260px; padding: 8px 12px; pointer-events: auto;
+  font: 600 13px/1.3 var(--sans); color: var(--ink);
+  background: linear-gradient(180deg, #f4e6bf, var(--parch));
+  border: 2px solid var(--gold-lo); border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(0,0,0,.45);
+  animation: rise .2s ease-out both;
+}
+.mascot-bubble::before {
+  content: ""; position: absolute; right: -8px; top: 50%; margin-top: -6px;
+  border: 6px solid transparent; border-left-color: var(--gold-lo); border-right: 0;
+}
+
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

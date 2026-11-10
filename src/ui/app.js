@@ -10,6 +10,39 @@
   let state = {};
   let items = [];
   const finishedAt = {};
+
+  // ---------- Lontrinha de armadura (mascote) ----------
+  let celebrateUntil = 0;
+  let bubbleTimer = null;
+  let appUpdatePending = false;
+  let lastAuto = "";
+  function setMascot(mode, text, ms) {
+    const sp = $("mascot-sprite");
+    sp.className = "mascot-sprite " + mode;
+    const b = $("mascot-bubble");
+    clearTimeout(bubbleTimer);
+    if (text) {
+      b.textContent = text;
+      b.hidden = false;
+      if (ms) bubbleTimer = setTimeout(() => (b.hidden = true), ms);
+    } else {
+      b.hidden = true;
+    }
+  }
+  // What the otter does when nothing special is happening.
+  function mascotAuto() {
+    if (Date.now() < celebrateUntil) return;
+    const pending = items.filter((x) => x.status === "atualizar" || x.status === "nao_instalado" || x.status === "externo").length;
+    let key, mode, text;
+    if (appUpdatePending) { key = "app"; mode = "avisando"; text = "Tenho uma versão nova do app! Clique em Atualizar o app."; }
+    else if (pending > 0) { key = "addons" + pending; mode = "avisando"; text = pending === 1 ? "Tem 1 novidade! Clique em Atualizar tudo." : `Tem ${pending} novidades! Clique em Atualizar tudo.`; }
+    else { key = "ok"; mode = "parada"; text = null; }
+    if (key === lastAuto && $("mascot-sprite").classList.contains(mode)) return;
+    lastAuto = key;
+    setMascot(mode, text, mode === "parada" ? 0 : 0);
+  }
+  const PHRASES = ["Pela Aliança!", "Elmo polido, addons em dia!", "Lontra de guarda, senhor!", "Precisando de algo? Clique em Verificar!", "Nenhum murloc passa por aqui."];
+
   let deviceUri = "https://github.com/login/device";
 
   const LABEL = {
@@ -39,6 +72,7 @@
     if (!state.configured && !state.loggedIn) return show("view-setup");
     if (!state.loggedIn) return show("view-login");
     show("view-main");
+    $("mascot").hidden = false;
     $("user-name").textContent = state.login || "Herói";
     if (state.avatar) $("avatar").src = state.avatar;
     const pv = $("path-value");
@@ -126,6 +160,7 @@
     cnt.hidden = pending === 0;
     cnt.textContent = pending;
     $("btn-update-all").disabled = pending === 0;
+    mascotAuto();
     const ok = items.filter((x) => x.status === "atualizado").length;
     $("foot-text").textContent = items.length ? `${ok} de ${items.length} addons em dia · Pela Aliança!` : "Pela Aliança!";
   }
@@ -190,6 +225,7 @@
           setBusy(false);
           break;
         case "progress": {
+          if (!(finishedAt[m.id] && Date.now() - finishedAt[m.id] < 5000 && m.value > 0.05)) setMascot("trabalhando", "Instalando… martelando aqui!");
           // A late report after the install finished must not bring back "Instalando…".
           if (finishedAt[m.id] && Date.now() - finishedAt[m.id] < 5000 && m.value > 0.05) break;
           delete finishedAt[m.id];
@@ -203,6 +239,10 @@
         }
         case "progressEnd": {
           finishedAt[m.id] = Date.now();
+          lastAuto = "";
+          celebrateUntil = Date.now() + 2600;
+          setMascot("comemorando", "Pronto! Pela Aliança!", 2600);
+          setTimeout(mascotAuto, 2700);
           setBusy(false);
           const c = document.querySelector(`.card[data-id="${CSS.escape(m.id)}"]`);
           if (c) c.querySelector(".progress").hidden = true;
@@ -212,6 +252,9 @@
           toast(m.kind, m.text);
           break;
         case "appUpdate":
+          appUpdatePending = true;
+          lastAuto = "";
+          mascotAuto();
           $("app-update").hidden = false;
           $("app-update-version").textContent = "(" + m.version + ")";
           $("app-update-progress").hidden = true;
@@ -263,6 +306,15 @@
     $("banner-text").textContent = "Nova versão do MF com a 1.3.4 oficial! Clique em Atualizar tudo.";
     renderItems();
   }
+
+  $("mascot-sprite").addEventListener("click", () => {
+    if (Date.now() < celebrateUntil) return;
+    const p = PHRASES[Math.floor(Math.random() * PHRASES.length)];
+    const was = $("mascot-sprite").className.split(" ")[1];
+    celebrateUntil = Date.now() + 1300;
+    setMascot("comemorando", p, 2200);
+    setTimeout(() => { lastAuto = ""; if (was === "parada") setMascot("parada", p, 900); mascotAuto(); }, 1350);
+  });
 
   send("ready");
 })();

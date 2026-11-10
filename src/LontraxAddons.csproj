@@ -9,7 +9,7 @@
     <AssemblyName>Lontrax Addons</AssemblyName>
     <RootNamespace>LontraxAddons</RootNamespace>
     <ApplicationIcon>..\assets\brasao.ico</ApplicationIcon>
-    <Version>1.0.6</Version>
+    <Version>1.0.7</Version>
     <Product>Lontrax Addons</Product>
     <Company>Lontrax</Company>
     <Description>Instala e atualiza os addons da galera Lontrax</Description>
@@ -35,6 +35,7 @@
     <EmbeddedResource Include="ui\app.js" LogicalName="ui.app.js" />
     <EmbeddedResource Include="..\assets\brasao.png" LogicalName="ui.brasao.png" />
     <EmbeddedResource Include="..\assets\brasao.ico" LogicalName="ui.brasao.ico" />
+    <EmbeddedResource Include="ui\lontrinha-*.png" LogicalName="ui.%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>
