@@ -203,6 +203,19 @@
         case "toast":
           toast(m.kind, m.text);
           break;
+        case "appUpdate":
+          $("app-update").hidden = false;
+          $("app-update-version").textContent = "(" + m.version + ")";
+          $("app-update-progress").hidden = true;
+          $("btn-update-app").disabled = false;
+          $("btn-update-app").textContent = "Atualizar o app";
+          break;
+        case "appUpdateProgress":
+          $("app-update-progress").hidden = false;
+          $("app-update-progress").querySelector(".bar").style.width = Math.round(m.value * 100) + "%";
+          $("btn-update-app").disabled = true;
+          $("btn-update-app").textContent = m.value >= 1 ? "Reabrindo…" : "Baixando…";
+          break;
       }
     });
 
@@ -222,6 +235,7 @@
   });
   $("btn-refresh").addEventListener("click", () => send("refresh"));
   $("btn-update-all").addEventListener("click", () => send("updateAll"));
+  $("btn-update-app").addEventListener("click", () => send("updateApp"));
   $("btn-pick").addEventListener("click", () => send("pickFolder"));
   $("path-value").addEventListener("click", () => send("openFolder"));
   $("opt-autostart").addEventListener("change", (e) => send("setOption", { name: "autostart", value: e.target.checked }));

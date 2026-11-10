@@ -24,9 +24,24 @@ sealed class MainForm : Form
     bool exiting;
     bool trayHintShown;
 
-    public MainForm(bool startHidden = false)
+    public MainForm(bool startHidden, EventWaitHandle showEvt, EventWaitHandle quitEvt)
     {
         this.startHidden = startHidden;
+        // Another copy asked us to show the window (shortcut clicked) or to quit (new version taking over).
+        var listener = new Thread(() =>
+        {
+            while (true)
+            {
+                var which = WaitHandle.WaitAny(new WaitHandle[] { showEvt, quitEvt });
+                try
+                {
+                    if (which == 0) BeginInvoke(ShowWindow);
+                    else { BeginInvoke(() => { exiting = true; Close(); }); return; }
+                }
+                catch { return; }
+            }
+        }) { IsBackground = true };
+        HandleCreated += (_, _) => listener.Start();
         Text = "Lontrax — Addons da Aliança";
         BackColor = Color.FromArgb(7, 13, 31);
         MinimumSize = new Size(940, 640);
@@ -125,10 +140,55 @@ sealed class MainForm : Form
         catch { }
     }
 
+    GitHubClient.ReleaseInfo? appUpdate;
+
+    /// <summary>Is there a newer Lontrax Addons? Hidden in the tray: update right away, quietly.
+    /// Window open: show the "update the app" bar and let the person click.</summary>
+    async Task CheckAppUpdate()
+    {
+        if (gh.Token == null) return;
+        GitHubClient.ReleaseInfo? rel;
+        try { rel = await gh.GetLatestAppRelease(Config.CatalogRepo); }
+        catch (Exception ex) { LogError("appUpdate", ex); return; }
+        if (rel == null || rel.Version <= SelfInstall.CurrentVersion) return;
+        appUpdate = rel;
+        if (!Visible && !busy) await UpdateApp(quiet: true);
+        else Post(new { type = "appUpdate", version = rel.Tag });
+    }
+
+    async Task UpdateApp(bool quiet)
+    {
+        var rel = appUpdate;
+        if (rel == null || busy) return;
+        busy = true;
+        try
+        {
+            var dir = Path.Combine(Config.DataDir, "tmp");
+            Directory.CreateDirectory(dir);
+            var file = Path.Combine(dir, "LontraxAddons-" + rel.Tag + ".exe");
+            if (!quiet) Post(new { type = "appUpdateProgress", value = 0.02 });
+            await gh.DownloadAsset(Config.CatalogRepo, rel.AssetId, file,
+                new Progress<double>(p => { if (!quiet) Post(new { type = "appUpdateProgress", value = p }); }));
+            if (SelfInstall.FileVersion(file) is not { } v || v < rel.Version)
+                throw new GitHubException("O arquivo baixado não é a versão nova. Tente de novo mais tarde.");
+            SelfInstall.ApplyUpdate(file, startHidden: !Visible);
+            exiting = true;
+            Close();
+        }
+        catch (Exception ex)
+        {
+            LogError("updateApp", ex);
+            if (!quiet) { Toast("erro", "Não deu para atualizar o app: " + ex.Message); Post(new { type = "appUpdate", version = rel.Tag }); }
+        }
+        finally { busy = false; }
+    }
+
     /// <summary>Checks GitHub for new versions; shows a Windows notification for news not told yet.</summary>
     async Task BackgroundCheck(bool manual)
     {
         if (gh.Token == null || busy) { if (manual) ShowWindow(); return; }
+        await CheckAppUpdate();
+        if (exiting) return;
         try
         {
             await RefreshCatalog(quiet: !Visible);
@@ -216,7 +276,7 @@ sealed class MainForm : Form
                     if (gh.Token != null)
                     {
                         if (startHidden) await BackgroundCheck(false); // started with Windows: just notify
-                        else await RefreshCatalog();
+                        else { await RefreshCatalog(); await CheckAppUpdate(); }
                     }
                     break;
                 case "login": await Login(); break;
@@ -225,6 +285,7 @@ sealed class MainForm : Form
                 case "refresh": await RefreshCatalog(); break;
                 case "install": await InstallOne((string)m!["id"]!); break;
                 case "updateAll": await UpdateAll(); break;
+                case "updateApp": await UpdateApp(quiet: false); break;
                 case "uninstall": Uninstall((string)m!["id"]!); break;
                 case "pickFolder": PickFolder(); break;
                 case "setOption":
@@ -323,6 +384,7 @@ sealed class MainForm : Form
         Toast("ok", $"Bem-vindo, {settings.Login ?? "herói"}! Pela Aliança!");
         SendState();
         await RefreshCatalog();
+        await CheckAppUpdate();
     }
 
     void Logout()

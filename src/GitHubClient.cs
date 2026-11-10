@@ -128,9 +128,33 @@ sealed class GitHubClient
         return new CommitInfo((string)j["sha"]!, msg, date);
     }
 
-    public async Task DownloadZip(string repo, string sha, string destFile, IProgress<double>? progress)
+    public sealed record ReleaseInfo(Version Version, string Tag, long AssetId, string AssetName);
+
+    /// <summary>Latest release of the app (its .exe is attached as an asset).</summary>
+    public async Task<ReleaseInfo?> GetLatestAppRelease(string repo)
     {
-        using var res = await Send(Api($"/repos/{repo}/zipball/{sha}"));
+        using var res = await Send(Api($"/repos/{repo}/releases/latest"));
+        var j = JsonNode.Parse(await res.Content.ReadAsStringAsync())!;
+        var tag = (string?)j["tag_name"] ?? "";
+        if (!Version.TryParse(tag.TrimStart('v', 'V'), out var v)) return null;
+        foreach (var a in j["assets"]?.AsArray() ?? new JsonArray())
+        {
+            var name = (string?)a?["name"] ?? "";
+            if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                return new ReleaseInfo(new Version(v.Major, v.Minor, Math.Max(v.Build, 0)), tag, (long)a!["id"]!, name);
+        }
+        return null;
+    }
+
+    public Task DownloadAsset(string repo, long assetId, string destFile, IProgress<double>? progress) =>
+        DownloadTo(Api($"/repos/{repo}/releases/assets/{assetId}", "application/octet-stream"), destFile, progress);
+
+    public Task DownloadZip(string repo, string sha, string destFile, IProgress<double>? progress) =>
+        DownloadTo(Api($"/repos/{repo}/zipball/{sha}"), destFile, progress);
+
+    async Task DownloadTo(HttpRequestMessage req, string destFile, IProgress<double>? progress)
+    {
+        using var res = await Send(req);
         var total = res.Content.Headers.ContentLength;
         await using var src = await res.Content.ReadAsStreamAsync();
         await using var dst = File.Create(destFile);

@@ -12,6 +12,15 @@ Repositório privado. Os addons de terceiros que aparecem no catálogo são só 
 O app acha a pasta do WoW Forever sozinho (`World of Warcraft\_forever_\Interface\AddOns`).
 Se não achar, clique em **Alterar** e escolha a pasta.
 
+## Instalação e atualização do próprio app
+
+- Na primeira vez que alguém abre o `.exe` baixado, o app se instala em
+  `%LOCALAPPDATA%\Programs\Lontrax Addons` e cria atalhos na Área de Trabalho e no Menu Iniciar.
+- Para publicar uma versão nova do app: aumente `<Version>` em `src/LontraxAddons.csproj`,
+  rode `dotnet publish src -c Release -o dist` e crie uma Release `vX.Y.Z` neste repositório com o
+  `.exe` anexado (nome terminando em `.exe`). Os apps da galera acham sozinhos: com a janela aberta
+  aparece "Atualizar o app"; escondido perto do relógio, atualiza em silêncio.
+
 ## Adicionar um addon ao catálogo
 
 Edite `catalogo.json` e acrescente um item em `addons`:
