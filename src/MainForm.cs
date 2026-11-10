@@ -282,7 +282,7 @@ sealed class MainForm : Form
                 case "login": await Login(); break;
                 case "cancelLogin": loginCts?.Cancel(); break;
                 case "logout": Logout(); break;
-                case "refresh": await RefreshCatalog(); break;
+                case "refresh": await RefreshCatalog(); await CheckAppUpdate(); break;
                 case "install": await InstallOne((string)m!["id"]!); break;
                 case "updateAll": await UpdateAll(); break;
                 case "updateApp": await UpdateApp(quiet: false); break;
