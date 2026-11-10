@@ -5,7 +5,7 @@ static class Config
 {
     /// <summary>Client ID of the "Lontrax Addons" GitHub App (Settings > Developer settings > GitHub Apps).
     /// It is not a secret. Until it is filled in, only the LONTRAX_TOKEN test login works.</summary>
-    public const string GitHubClientId = "COLOQUE_AQUI_O_CLIENT_ID";
+    public const string GitHubClientId = "Iv23liItcypx06gwMaCJ";
 
     /// <summary>The private repo that holds catalogo.json (the list of addons the app manages).</summary>
     public const string CatalogRepo = "viniciusvieirafx/Lontrax-Addons";
