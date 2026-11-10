@@ -9,6 +9,7 @@
 
   let state = {};
   let items = [];
+  const finishedAt = {};
   let deviceUri = "https://github.com/login/device";
 
   const LABEL = {
@@ -189,6 +190,9 @@
           setBusy(false);
           break;
         case "progress": {
+          // A late report after the install finished must not bring back "Instalando…".
+          if (finishedAt[m.id] && Date.now() - finishedAt[m.id] < 5000 && m.value > 0.05) break;
+          delete finishedAt[m.id];
           setBusy(true);
           const c = document.querySelector(`.card[data-id="${CSS.escape(m.id)}"]`);
           if (!c) break;
@@ -197,9 +201,13 @@
           c.querySelector(".main-btn").textContent = "Instalando…";
           break;
         }
-        case "progressEnd":
+        case "progressEnd": {
+          finishedAt[m.id] = Date.now();
           setBusy(false);
+          const c = document.querySelector(`.card[data-id="${CSS.escape(m.id)}"]`);
+          if (c) c.querySelector(".progress").hidden = true;
           break;
+        }
         case "toast":
           toast(m.kind, m.text);
           break;

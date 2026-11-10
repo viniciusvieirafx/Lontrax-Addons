@@ -72,7 +72,7 @@ static class Installer
         try
         {
             var zip = Path.Combine(work, "addon.zip");
-            await gh.DownloadZip(e.Repo, commit.Sha, zip, new Progress<double>(p => progress?.Report(p * 0.8)));
+            await gh.DownloadZip(e.Repo, commit.Sha, zip, new SyncProgress(p => progress?.Report(p * 0.8)));
             var unzip = Path.Combine(work, "x");
             ZipFile.ExtractToDirectory(zip, unzip);
             var top = Directory.GetDirectories(unzip).Single(); // GitHub zips have one "owner-repo-sha" folder
@@ -147,4 +147,11 @@ static class Installer
             CopyDir(d, Path.Combine(dest, n));
         }
     }
+}
+
+/// <summary>Reports progress right away (System.Progress queues it, so the last report could land
+/// after the install finished and show "Installing..." again). Install runs on the UI thread.</summary>
+sealed class SyncProgress(Action<double> report) : IProgress<double>
+{
+    public void Report(double value) => report(value);
 }

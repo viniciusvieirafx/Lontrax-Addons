@@ -168,7 +168,7 @@ sealed class MainForm : Form
             var file = Path.Combine(dir, "LontraxAddons-" + rel.Tag + ".exe");
             if (!quiet) Post(new { type = "appUpdateProgress", value = 0.02 });
             await gh.DownloadAsset(Config.CatalogRepo, rel.AssetId, file,
-                new Progress<double>(p => { if (!quiet) Post(new { type = "appUpdateProgress", value = p }); }));
+                new SyncProgress(p => { if (!quiet) Post(new { type = "appUpdateProgress", value = p }); }));
             if (SelfInstall.FileVersion(file) is not { } v || v < rel.Version)
                 throw new GitHubException("O arquivo baixado não é a versão nova. Tente de novo mais tarde.");
             SelfInstall.ApplyUpdate(file, startHidden: !Visible);
@@ -459,7 +459,7 @@ sealed class MainForm : Form
         {
             if (!latest.TryGetValue(id, out var c)) { c = await gh.GetLatestCommit(e.Repo, e.Ref); latest[id] = c; }
             Post(new { type = "progress", id, value = 0.02 });
-            await Installer.Install(gh, settings.AddOnsPath!, e, c, new Progress<double>(p => Post(new { type = "progress", id, value = p })));
+            await Installer.Install(gh, settings.AddOnsPath!, e, c, new SyncProgress(p => Post(new { type = "progress", id, value = p })));
             Toast("ok", $"{e.Nome} instalado!" + (WowLocator.WowIsRunning() ? " No jogo, digite /reload." : ""));
         }
         catch (Exception ex)
