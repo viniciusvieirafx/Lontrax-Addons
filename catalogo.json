@@ -1,0 +1,17 @@
+{
+  "titulo": "Arsenal Lontrax",
+  "mensagem": "Bem-vindos à Lontrax! Clique em Atualizar tudo para receber os addons da galera.",
+  "addons": [
+    {
+      "id": "mfnameplates",
+      "nome": "MF Nameplates (galera)",
+      "descricao": "Placas de nome com cores por facção e grupo, barra do grupo em combate, alerta de vida baixa, pets e o visual da Lontrax.",
+      "repo": "viniciusvieirafx/MFNameplates-amigos",
+      "ref": "main",
+      "pasta": "MFNameplates",
+      "autor": "Marcelian & Flame + Lontrax",
+      "tags": ["Placas de nome", "Interface"],
+      "obrigatorio": true
+    }
+  ]
+}

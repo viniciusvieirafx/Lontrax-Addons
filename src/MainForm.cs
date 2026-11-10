@@ -1,0 +1,415 @@
+using System.Diagnostics;
+using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.WinForms;
+
+namespace LontraxAddons;
+
+sealed class MainForm : Form
+{
+    readonly WebView2 web = new() { Dock = DockStyle.Fill, DefaultBackgroundColor = Color.FromArgb(7, 13, 31) };
+    readonly Settings settings = Settings.Load();
+    readonly GitHubClient gh = new();
+    CatalogFile? catalog;
+    readonly Dictionary<string, GitHubClient.CommitInfo> latest = new();
+    CancellationTokenSource? loginCts;
+    bool busy;
+
+    // ---------- tray: the app keeps running next to the clock and checks for updates ----------
+    readonly NotifyIcon tray = new();
+    readonly System.Windows.Forms.Timer checkTimer = new() { Interval = 30 * 60 * 1000 };
+    readonly bool startHidden;
+    bool exiting;
+    bool trayHintShown;
+
+    public MainForm(bool startHidden = false)
+    {
+        this.startHidden = startHidden;
+        Text = "Lontrax — Addons da Aliança";
+        BackColor = Color.FromArgb(7, 13, 31);
+        MinimumSize = new Size(940, 640);
+        Size = new Size(1180, 780);
+        StartPosition = FormStartPosition.CenterScreen;
+        using (var s = Assembly.GetExecutingAssembly().GetManifestResourceStream("ui.brasao.ico"))
+            if (s != null) Icon = new Icon(s);
+        Controls.Add(web);
+        Load += async (_, _) => await InitWeb();
+        gh.Token = settings.GetToken();
+
+        tray.Icon = Icon;
+        tray.Text = "Lontrax Addons";
+        tray.Visible = true;
+        var menu = new ContextMenuStrip();
+        menu.Items.Add("Abrir Lontrax Addons", null, (_, _) => ShowWindow());
+        menu.Items.Add("Verificar atualizações agora", null, async (_, _) => await BackgroundCheck(true));
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add("Sair", null, (_, _) => { exiting = true; Close(); });
+        tray.ContextMenuStrip = menu;
+        tray.DoubleClick += (_, _) => ShowWindow();
+        tray.BalloonTipClicked += (_, _) => ShowWindow();
+        checkTimer.Tick += async (_, _) => await BackgroundCheck(false);
+        checkTimer.Start();
+
+        if (startHidden)
+        {
+            // Started with Windows: load quietly, stay in the tray.
+            Opacity = 0;
+            ShowInTaskbar = false;
+            Shown += (_, _) => { Hide(); Opacity = 1; ShowInTaskbar = true; };
+        }
+        ApplyAutostart();
+    }
+
+    void ShowWindow()
+    {
+        Show();
+        if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;
+        Activate();
+        SendState();
+        SendAddons();
+    }
+
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        if (!exiting && settings.KeepInTray && e.CloseReason == CloseReason.UserClosing)
+        {
+            e.Cancel = true;
+            Hide();
+            if (!trayHintShown)
+            {
+                trayHintShown = true;
+                tray.ShowBalloonTip(4000, "Lontrax Addons continua de olho",
+                    "Fico aqui perto do relógio e aviso quando sair atualização. Para fechar de vez: botão direito no brasão > Sair.", ToolTipIcon.Info);
+            }
+            return;
+        }
+        tray.Visible = false;
+        base.OnFormClosing(e);
+    }
+
+    void ApplyAutostart()
+    {
+        try
+        {
+            using var run = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true);
+            if (run == null) return;
+            if (settings.StartWithWindows) run.SetValue("LontraxAddons", $"\"{Environment.ProcessPath}\" --tray");
+            else run.DeleteValue("LontraxAddons", false);
+        }
+        catch { }
+    }
+
+    /// <summary>Checks GitHub for new versions; shows a Windows notification for news not told yet.</summary>
+    async Task BackgroundCheck(bool manual)
+    {
+        if (gh.Token == null || busy) { if (manual) ShowWindow(); return; }
+        try
+        {
+            await RefreshCatalog(quiet: !Visible);
+            if (catalog == null || settings.AddOnsPath == null) return;
+            var news = new List<string>();
+            foreach (var e in catalog.Addons)
+            {
+                if (!latest.TryGetValue(e.Id, out var c)) continue;
+                var inst = InstalledInfo.Read(settings.AddOnsPath, e);
+                var pending = inst != null ? inst.Sha != c.Sha : e.Obrigatorio;
+                if (!pending) continue;
+                if (!manual && settings.Notified.TryGetValue(e.Id, out var told) && told == c.Sha) continue;
+                settings.Notified[e.Id] = c.Sha;
+                news.Add(e.Nome);
+            }
+            settings.Save();
+            if (news.Count > 0)
+                tray.ShowBalloonTip(8000, "Atualização para a Lontrax!",
+                    (news.Count == 1 ? news[0] + " tem versão nova." : string.Join(", ", news) + " têm versões novas.") + " Clique para atualizar.",
+                    ToolTipIcon.Info);
+            else if (manual)
+                tray.ShowBalloonTip(3000, "Lontrax Addons", "Tudo em dia. Pela Aliança!", ToolTipIcon.Info);
+        }
+        catch (Exception ex) when (manual)
+        {
+            tray.ShowBalloonTip(5000, "Lontrax Addons", ex.Message, ToolTipIcon.Warning);
+        }
+        catch { }
+    }
+
+    async Task InitWeb()
+    {
+        try
+        {
+            var uiDir = ExtractUi();
+            var env = await CoreWebView2Environment.CreateAsync(null, Path.Combine(Config.DataDir, "webview"));
+            await web.EnsureCoreWebView2Async(env);
+            var core = web.CoreWebView2;
+            core.Settings.AreDevToolsEnabled = Debugger.IsAttached;
+            core.Settings.IsZoomControlEnabled = false;
+            core.Settings.AreDefaultContextMenusEnabled = false;
+            core.Settings.IsStatusBarEnabled = false;
+            core.SetVirtualHostNameToFolderMapping("app.lontrax", uiDir, CoreWebView2HostResourceAccessKind.Allow);
+            core.WebMessageReceived += async (_, e) => await OnMessage(e.WebMessageAsJson);
+            core.NewWindowRequested += (_, e) => { e.Handled = true; OpenUrl(e.Uri); };
+            core.Navigate("https://app.lontrax/index.html");
+        }
+        catch (WebView2RuntimeNotFoundException)
+        {
+            if (MessageBox.Show("Falta um componente do Windows (Microsoft Edge WebView2).\n\nQuer abrir a página para instalar? Depois é só abrir o Lontrax Addons de novo.",
+                    Text, MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                OpenUrl("https://go.microsoft.com/fwlink/p/?LinkId=2124703");
+            Close();
+        }
+    }
+
+    static string ExtractUi()
+    {
+        var dir = Path.Combine(Config.DataDir, "ui");
+        Directory.CreateDirectory(dir);
+        var asm = Assembly.GetExecutingAssembly();
+        foreach (var name in asm.GetManifestResourceNames().Where(n => n.StartsWith("ui.")))
+        {
+            using var s = asm.GetManifestResourceStream(name)!;
+            using var f = File.Create(Path.Combine(dir, name[3..]));
+            s.CopyTo(f);
+        }
+        return dir;
+    }
+
+    // ---------- messages from the page ----------
+    async Task OnMessage(string json)
+    {
+        JsonNode? m;
+        try { m = JsonNode.Parse(json); } catch { return; }
+        var cmd = (string?)m?["cmd"];
+        try
+        {
+            switch (cmd)
+            {
+                case "ready":
+                    SendState();
+                    if (gh.Token != null)
+                    {
+                        if (startHidden) await BackgroundCheck(false); // started with Windows: just notify
+                        else await RefreshCatalog();
+                    }
+                    break;
+                case "login": await Login(); break;
+                case "cancelLogin": loginCts?.Cancel(); break;
+                case "logout": Logout(); break;
+                case "refresh": await RefreshCatalog(); break;
+                case "install": await InstallOne((string)m!["id"]!); break;
+                case "updateAll": await UpdateAll(); break;
+                case "uninstall": Uninstall((string)m!["id"]!); break;
+                case "pickFolder": PickFolder(); break;
+                case "setOption":
+                    var opt = (string?)m!["name"];
+                    var on = (bool?)m["value"] ?? false;
+                    if (opt == "autostart") { settings.StartWithWindows = on; ApplyAutostart(); }
+                    if (opt == "tray") settings.KeepInTray = on;
+                    settings.Save();
+                    SendState();
+                    break;
+                case "openFolder": if (settings.AddOnsPath != null) Process.Start("explorer.exe", settings.AddOnsPath); break;
+                case "openUrl": OpenUrl((string?)m!["url"]); break;
+                case "copy": Clipboard.SetText((string?)m!["text"] ?? ""); break;
+            }
+        }
+        catch (Exception ex)
+        {
+            Toast("erro", ex is GitHubException ? ex.Message : "Algo deu errado: " + ex.Message);
+            if (ex is GitHubException { Status: System.Net.HttpStatusCode.Unauthorized }) Logout();
+        }
+    }
+
+    void Post(object payload) => web.CoreWebView2?.PostWebMessageAsJson(JsonSerializer.Serialize(payload));
+    void Toast(string kind, string text) => Post(new { type = "toast", kind, text });
+
+    void SendState()
+    {
+        if (settings.AddOnsPath == null || !Directory.Exists(settings.AddOnsPath))
+        {
+            settings.AddOnsPath = WowLocator.Find();
+            settings.Save();
+        }
+        Post(new
+        {
+            type = "state",
+            loggedIn = gh.Token != null,
+            login = settings.Login,
+            avatar = settings.AvatarUrl,
+            addonsPath = settings.AddOnsPath,
+            wowRunning = WowLocator.WowIsRunning(),
+            configured = !Config.GitHubClientId.StartsWith("COLOQUE") || Environment.GetEnvironmentVariable("LONTRAX_TOKEN") != null,
+            version = Application.ProductVersion.Split('+')[0],
+            autostart = settings.StartWithWindows,
+            keepInTray = settings.KeepInTray,
+        });
+    }
+
+    // ---------- login ----------
+    async Task Login()
+    {
+        loginCts?.Cancel();
+        loginCts = new CancellationTokenSource();
+        var dc = await GitHubClient.StartDeviceLogin();
+        Post(new { type = "deviceCode", code = dc.UserCode, uri = dc.VerificationUri });
+        Clipboard.SetText(dc.UserCode);
+        string token;
+        try { token = await GitHubClient.WaitDeviceLogin(dc, loginCts.Token); }
+        catch (TaskCanceledException) { Post(new { type = "loginCancelled" }); return; }
+        catch (GitHubException ex) { Post(new { type = "loginCancelled" }); Toast("erro", ex.Message); return; }
+        gh.Token = token;
+        var (login, avatar) = await gh.GetUser();
+        settings.Login = login;
+        settings.AvatarUrl = avatar;
+        settings.SetToken(token);
+        Toast("ok", $"Bem-vindo, {login}! Pela Aliança!");
+        SendState();
+        await RefreshCatalog();
+    }
+
+    void Logout()
+    {
+        gh.Token = null;
+        settings.Login = null;
+        settings.AvatarUrl = null;
+        settings.SetToken(null);
+        catalog = null;
+        SendState();
+    }
+
+    // ---------- catalog ----------
+    async Task RefreshCatalog(bool quiet = false)
+    {
+        if (gh.Token == null || busy) return;
+        if (!quiet) Post(new { type = "loading" });
+        var raw = await gh.GetRawFile(Config.CatalogRepo, Config.CatalogFile, Config.CatalogRef);
+        catalog = JsonSerializer.Deserialize<CatalogFile>(raw, GitHubClient.JsonOptions) ?? new CatalogFile();
+        latest.Clear();
+        var errors = new Dictionary<string, string>();
+        await Task.WhenAll(catalog.Addons.Select(async e =>
+        {
+            try { var c = await gh.GetLatestCommit(e.Repo, e.Ref); lock (latest) latest[e.Id] = c; }
+            catch (GitHubException ex) { lock (errors) errors[e.Id] = ex.Message; }
+        }));
+        SendAddons(errors);
+    }
+
+    void SendAddons(Dictionary<string, string>? errors = null)
+    {
+        if (catalog == null) return;
+        var path = settings.AddOnsPath;
+        var items = catalog.Addons.Select(e =>
+        {
+            latest.TryGetValue(e.Id, out var c);
+            var inst = path != null ? InstalledInfo.Read(path, e) : null;
+            var exists = path != null && InstalledInfo.FolderExists(path, e);
+            string status;
+            string? err = null;
+            if (errors != null && errors.TryGetValue(e.Id, out var x)) { status = "erro"; err = x; }
+            else if (!exists) status = "nao_instalado";
+            else if (inst == null) status = "externo";
+            else if (c != null && inst.Sha == c.Sha) status = "atualizado";
+            else status = "atualizar";
+            return new
+            {
+                id = e.Id, nome = e.Nome, descricao = e.Descricao, autor = e.Autor, tags = e.Tags ?? new List<string>(),
+                repo = e.Repo, status, erro = err, obrigatorio = e.Obrigatorio,
+                instalado = inst == null ? null : new { sha = inst.Sha[..7], data = inst.Instalado.ToString("dd/MM/yyyy HH:mm") },
+                novo = c == null ? null : new { sha = c.Sha[..7], data = c.Date.ToLocalTime().ToString("dd/MM/yyyy HH:mm"), msg = c.Message },
+            };
+        }).ToList();
+        Post(new { type = "addons", titulo = catalog.Titulo, mensagem = catalog.Mensagem, items, wowRunning = WowLocator.WowIsRunning() });
+    }
+
+    // ---------- install ----------
+    bool CheckPath()
+    {
+        if (settings.AddOnsPath != null && Directory.Exists(settings.AddOnsPath)) return true;
+        Toast("erro", "Não achei a pasta do WoW. Clique em \"Alterar\" e escolha a pasta AddOns.");
+        return false;
+    }
+
+    async Task InstallOne(string id, bool refresh = true)
+    {
+        if (busy || catalog == null || !CheckPath()) return;
+        var e = catalog.Addons.FirstOrDefault(a => a.Id == id);
+        if (e == null) return;
+        busy = true;
+        try
+        {
+            if (!latest.TryGetValue(id, out var c)) { c = await gh.GetLatestCommit(e.Repo, e.Ref); latest[id] = c; }
+            Post(new { type = "progress", id, value = 0.02 });
+            await Installer.Install(gh, settings.AddOnsPath!, e, c, new Progress<double>(p => Post(new { type = "progress", id, value = p })));
+            Toast("ok", $"{e.Nome} instalado!" + (WowLocator.WowIsRunning() ? " No jogo, digite /reload." : ""));
+        }
+        catch (Exception ex)
+        {
+            Toast("erro", $"{e.Nome}: " + (ex is GitHubException ? ex.Message : ex.Message));
+        }
+        finally
+        {
+            busy = false;
+            Post(new { type = "progressEnd", id });
+            if (refresh) SendAddons();
+        }
+    }
+
+    async Task UpdateAll()
+    {
+        if (catalog == null || !CheckPath()) return;
+        var path = settings.AddOnsPath!;
+        var todo = catalog.Addons.Where(e =>
+        {
+            if (!latest.TryGetValue(e.Id, out var c)) return false;
+            var inst = InstalledInfo.Read(path, e);
+            return inst == null || inst.Sha != c.Sha;
+        }).ToList();
+        if (todo.Count == 0) { Toast("ok", "Tudo em dia. Nada para atualizar!"); return; }
+        foreach (var e in todo) await InstallOne(e.Id, refresh: false);
+        SendAddons();
+    }
+
+    void Uninstall(string id)
+    {
+        if (catalog == null || !CheckPath()) return;
+        var e = catalog.Addons.FirstOrDefault(a => a.Id == id);
+        if (e == null) return;
+        Installer.Uninstall(settings.AddOnsPath!, e);
+        Toast("ok", $"{e.Nome} removido (uma cópia ficou guardada nos backups).");
+        SendAddons();
+    }
+
+    void PickFolder()
+    {
+        using var dlg = new FolderBrowserDialog
+        {
+            Description = "Escolha a pasta AddOns do WoW (World of Warcraft\\_forever_\\Interface\\AddOns)",
+            UseDescriptionForTitle = true,
+            InitialDirectory = settings.AddOnsPath ?? "",
+        };
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+        var p = dlg.SelectedPath;
+        // Accept the WoW folder or _forever_ too, and walk down to AddOns.
+        foreach (var guess in new[] { p, Path.Combine(p, "AddOns"), Path.Combine(p, "Interface", "AddOns"), Path.Combine(p, Config.WowFlavor, "Interface", "AddOns") })
+        {
+            if (WowLocator.LooksLikeAddOns(guess)) { p = guess; break; }
+        }
+        if (!WowLocator.LooksLikeAddOns(p))
+        {
+            Toast("erro", "Essa não parece ser a pasta AddOns do WoW.");
+            return;
+        }
+        settings.AddOnsPath = p;
+        settings.Save();
+        SendState();
+        SendAddons();
+    }
+
+    static void OpenUrl(string? url)
+    {
+        if (url == null) return;
+        if (!(url.StartsWith("https://github.com/") || url.StartsWith("https://git-scm.com/") || url.StartsWith("https://go.microsoft.com/"))) return;
+        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+    }
+}

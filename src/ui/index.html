@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lontrax — Addons da Aliança</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@500;600;700&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="sky" aria-hidden="true"></div>
+
+<!-- Login -->
+<section id="view-login" class="view center" hidden>
+  <div class="hero">
+    <div class="crest-wrap big"><div class="rays"></div><img src="brasao.png" alt="Brasão Lontrax" class="crest"></div>
+    <h1 class="title">Lontrax</h1>
+    <p class="subtitle">Arsenal de Addons da Aliança</p>
+    <div class="plaque">
+      <p>Entre com sua conta do <b>GitHub</b> para receber os addons da galera, sempre atualizados.</p>
+      <button class="btn gold xl" id="btn-login">Entrar com GitHub</button>
+      <p class="hint">Você só faz isso uma vez neste computador.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Device code -->
+<section id="view-code" class="view center" hidden>
+  <div class="hero">
+    <div class="crest-wrap"><img src="brasao.png" alt="" class="crest"></div>
+    <h2 class="title sm">Quase lá, herói!</h2>
+    <ol class="steps">
+      <li>Clique em <b>Abrir GitHub</b> (o código já foi copiado).</li>
+      <li>Cole o código, confirme e autorize o <b>Lontrax Addons</b>.</li>
+      <li>Volte aqui: o resto é automático.</li>
+    </ol>
+    <div class="code" id="device-code" title="Clique para copiar">----</div>
+    <div class="row">
+      <button class="btn gold" id="btn-open-github">Abrir GitHub</button>
+      <button class="btn ghost" id="btn-copy-code">Copiar código</button>
+    </div>
+    <p class="waiting"><span class="spinner"></span> Aguardando você confirmar no navegador…</p>
+    <button class="link" id="btn-cancel-login">Cancelar</button>
+  </div>
+</section>
+
+<!-- Not configured -->
+<section id="view-setup" class="view center" hidden>
+  <div class="hero">
+    <div class="crest-wrap"><img src="brasao.png" alt="" class="crest"></div>
+    <h2 class="title sm">Falta configurar</h2>
+    <div class="plaque">
+      <p>Este app ainda não tem o <b>Client ID</b> do GitHub App da Lontrax.
+      Quem cuida do app precisa colocar o Client ID em <code>Config.cs</code> e gerar o app de novo.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Main -->
+<section id="view-main" class="view" hidden>
+  <header class="top">
+    <div class="brand">
+      <div class="crest-wrap sm"><img src="brasao.png" alt="Brasão Lontrax" class="crest"></div>
+      <div>
+        <h1 class="title inline">Lontrax</h1>
+        <p class="subtitle">Arsenal de Addons da Aliança</p>
+      </div>
+    </div>
+    <div class="user">
+      <img id="avatar" alt="">
+      <div>
+        <div class="user-name" id="user-name"></div>
+        <button class="link small" id="btn-logout">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="banner" id="banner" hidden><span class="banner-text" id="banner-text"></span></div>
+
+  <div class="toolbar">
+    <div class="path">
+      <span class="path-label">Pasta do WoW</span>
+      <button class="path-value" id="path-value" title="Abrir a pasta"></button>
+      <button class="link small" id="btn-pick">Alterar</button>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" id="btn-refresh"><span class="i-refresh"></span> Verificar</button>
+      <button class="btn gold" id="btn-update-all">Atualizar tudo <span class="count" id="update-count" hidden></span></button>
+    </div>
+  </div>
+
+  <div class="warn" id="wow-warning" hidden>⚔ O WoW está aberto. Pode atualizar, mas depois digite <b>/reload</b> no jogo.</div>
+
+  <main class="grid" id="grid"></main>
+
+  <footer class="foot">
+    <span id="foot-text">Pela Aliança!</span>
+    <span class="opts">
+      <label class="opt"><input type="checkbox" id="opt-autostart"> Iniciar com o Windows</label>
+      <label class="opt"><input type="checkbox" id="opt-tray"> Ficar perto do relógio e avisar atualizações</label>
+      <span id="version"></span>
+    </span>
+  </footer>
+</section>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<template id="card-tpl">
+  <article class="card">
+    <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+    <div class="card-head">
+      <h3 class="card-title"></h3>
+      <span class="status"></span>
+    </div>
+    <p class="card-desc"></p>
+    <div class="tags"></div>
+    <dl class="meta"></dl>
+    <div class="progress" hidden><div class="bar"></div></div>
+    <div class="card-actions">
+      <button class="btn gold sm main-btn"></button>
+      <button class="link small remove-btn">Remover</button>
+    </div>
+  </article>
+</template>
+
+<script src="app.js"></script>
+</body>
+</html>
