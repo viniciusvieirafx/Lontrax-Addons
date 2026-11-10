@@ -251,6 +251,9 @@
         case "toast":
           toast(m.kind, m.text);
           break;
+        case "focus":
+          document.body.classList.toggle("paused", !m.on);
+          break;
         case "appUpdate":
           appUpdatePending = true;
           lastAuto = "";

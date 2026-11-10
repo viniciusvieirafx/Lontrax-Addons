@@ -282,4 +282,6 @@ code { font-family: Consolas, monospace; color: var(--gold-hi); }
   border: 6px solid transparent; border-left-color: var(--gold-lo); border-right: 0;
 }
 
+body.paused *, body.paused *::before, body.paused *::after { animation-play-state: paused !important; }
+
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

@@ -50,6 +50,9 @@ sealed class MainForm : Form
         using (var s = Assembly.GetExecutingAssembly().GetManifestResourceStream("ui.brasao.ico"))
             if (s != null) Icon = new Icon(s);
         Controls.Add(web);
+        // Pause every animation while the window is not in focus (saves GPU while you play).
+        Activated += (_, _) => Post(new { type = "focus", on = true });
+        Deactivate += (_, _) => Post(new { type = "focus", on = false });
         Load += async (_, _) => await InitWeb();
         gh.Token = settings.GetToken();
 
