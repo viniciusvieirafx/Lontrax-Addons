@@ -19,7 +19,9 @@ static class Config
     {
         get
         {
-            var d = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LontraxAddons");
+            // LONTRAX_DATA: tests use their own folder, never the real backups/settings.
+            var d = Environment.GetEnvironmentVariable("LONTRAX_DATA")
+                    ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LontraxAddons");
             Directory.CreateDirectory(d);
             return d;
         }
