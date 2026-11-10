@@ -69,14 +69,19 @@ static class SelfInstall
         }
     }
 
+    /// <summary>Deletes the previous version left by an update. Right after an update the old copy may
+    /// still be closing, so keep trying for a while in the background.</summary>
     static void CleanupOld()
     {
-        try
+        var old = (Environment.ProcessPath ?? "") + ".old";
+        if (!File.Exists(old)) return;
+        Task.Run(async () =>
         {
-            var old = (Environment.ProcessPath ?? "") + ".old";
-            if (File.Exists(old)) File.Delete(old);
-        }
-        catch { }
+            for (var i = 0; i < 30 && File.Exists(old); i++)
+            {
+                try { File.Delete(old); } catch { await Task.Delay(1000); }
+            }
+        });
     }
 
     static void CreateShortcuts()
