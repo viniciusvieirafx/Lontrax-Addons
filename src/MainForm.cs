@@ -250,11 +250,12 @@ sealed class MainForm : Form
                     break;
                 case "openFolder": if (settings.AddOnsPath != null) Process.Start("explorer.exe", settings.AddOnsPath); break;
                 case "openUrl": OpenUrl((string?)m!["url"]); break;
-                case "copy": Clipboard.SetText((string?)m!["text"] ?? ""); break;
+                case "copy": SafeCopy((string?)m!["text"] ?? ""); break;
             }
         }
         catch (Exception ex)
         {
+            LogError(cmd ?? "?", ex);
             Toast("erro", ex is GitHubException ? ex.Message : "Algo deu errado: " + ex.Message);
             if (ex is GitHubException { Status: System.Net.HttpStatusCode.Unauthorized }) Logout();
         }
@@ -289,23 +290,53 @@ sealed class MainForm : Form
     }
 
     // ---------- login ----------
+    /// <summary>The clipboard can be busy (another program holding it): retry, and never let it break the login.</summary>
+    static void SafeCopy(string text)
+    {
+        try { Clipboard.SetDataObject(text, true, 10, 100); } catch (Exception ex) { LogError("clipboard", ex); }
+    }
+
+    static void LogError(string where, Exception ex)
+    {
+        try
+        {
+            File.AppendAllText(Path.Combine(Config.DataDir, "erros.log"),
+                $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{where}] {ex.GetType().Name}: {ex.Message}{Environment.NewLine}");
+        }
+        catch { }
+    }
+
     async Task Login()
     {
         loginCts?.Cancel();
         loginCts = new CancellationTokenSource();
-        var dc = await GitHubClient.StartDeviceLogin();
-        Post(new { type = "deviceCode", code = dc.UserCode, uri = dc.VerificationUri });
-        Clipboard.SetText(dc.UserCode);
         string token;
-        try { token = await GitHubClient.WaitDeviceLogin(dc, loginCts.Token); }
+        try
+        {
+            var dc = await GitHubClient.StartDeviceLogin();
+            Post(new { type = "deviceCode", code = dc.UserCode, uri = dc.VerificationUri });
+            SafeCopy(dc.UserCode);
+            token = await GitHubClient.WaitDeviceLogin(dc, loginCts.Token);
+        }
         catch (TaskCanceledException) { Post(new { type = "loginCancelled" }); return; }
-        catch (GitHubException ex) { Post(new { type = "loginCancelled" }); Toast("erro", ex.Message); return; }
+        catch (Exception ex)
+        {
+            LogError("login", ex);
+            Post(new { type = "loginCancelled" });
+            Toast("erro", ex is GitHubException ? ex.Message : "Não deu para entrar: " + ex.Message);
+            return;
+        }
         gh.Token = token;
-        var (login, avatar) = await gh.GetUser();
-        settings.Login = login;
-        settings.AvatarUrl = avatar;
         settings.SetToken(token);
-        Toast("ok", $"Bem-vindo, {login}! Pela Aliança!");
+        try
+        {
+            var (login, avatar) = await gh.GetUser();
+            settings.Login = login;
+            settings.AvatarUrl = avatar;
+            settings.Save();
+        }
+        catch (Exception ex) { LogError("user", ex); }
+        Toast("ok", $"Bem-vindo, {settings.Login ?? "herói"}! Pela Aliança!");
         SendState();
         await RefreshCatalog();
     }
