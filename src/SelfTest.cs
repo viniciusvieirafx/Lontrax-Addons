@@ -48,7 +48,10 @@ static class SelfTest
                 if (l.StartsWith("CLIENT_ID=")) m.Api.ClientId = l[10..].Trim();
                 if (l.StartsWith("CLIENT_SECRET=")) m.Api.ClientSecret = l[14..].Trim();
             }
-            if (!m.Api.HasKeys) m.LoadKeys(Settings.Load()); // keys saved (encrypted) in config.json
+            if (!m.Api.HasKeys && Environment.GetEnvironmentVariable("LONTRAX_SHARED") == null)
+                m.LoadKeys(Settings.Load()); // keys saved (encrypted) in config.json
+            m.Shared = new GitHubClient { Token = Settings.Load().GetToken() };
+            W("mode: " + (m.UsingShared ? "precos da galera (GitHub)" : "chave propria"));
             var t = System.Diagnostics.Stopwatch.StartNew();
             await m.LoadHouses();
             W($"houses: {m.Houses.Count} ({string.Join(", ", m.Houses.Select(h => h.Faction + " " + h.Id))})");
@@ -56,9 +59,9 @@ static class SelfTest
             W($"recipes: {t.Elapsed.TotalSeconds:0}s, " + string.Join(", ", m.Book!.Professions.Select(p => $"{p.Name} {p.Recipes.Count}")));
             W("vendor prices: " + string.Join(", ", m.Book.Vendor.Select(v => $"{v.Key}={v.Value}")));
             t.Restart();
-            var fresh = await m.RefreshHouse(house);
+            var fresh = await m.Refresh(house);
             W($"house {house}: fresh={fresh} {t.Elapsed.TotalSeconds:0}s items={m.GetSnapshot(house)!.Prices.Count} lm={m.GetSnapshot(house)!.LastModified}");
-            W($"second refresh (should be not-modified): fresh={await m.RefreshHouse(house)}");
+            W($"second refresh (should be not-modified): fresh={await m.Refresh(house)}");
             var rows = m.Compute(house, Array.Empty<int>());
             W($"rows: {rows.Count}, complete {rows.Count(r => r.completo)}, priced {rows.Count(r => r.lucro != null)}, profitable {rows.Count(r => r.lucro > 0)}");
             foreach (var r in rows.Where(r => r.lucro > 0 && r.aVenda >= 5).OrderByDescending(r => r.lucro).Take(15))

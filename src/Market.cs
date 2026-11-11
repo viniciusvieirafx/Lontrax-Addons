@@ -255,6 +255,7 @@ sealed class Market
             if (built != null && built.Professions.Count > 0) Book = built;
         }
         if (!force && Book != null && Book.Professions.Count > 0) return;
+        if (!Api.HasKeys && Book != null && Book.Professions.Count > 0) return; // no key: the built-in copy is the list
 
         var book = new RecipeBook { Fetched = DateTime.UtcNow };
         using var idx = await Api.GetJson("/data/wow/profession/index", BlizzardClient.StaticNs)
@@ -418,6 +419,49 @@ sealed class Market
         return true;
     }
 
+    // ---------- shared prices (no key needed) ----------
+    /// <summary>The GitHub login the app already has. Without an own Blizzard key, prices come from the
+    /// "precos" branch of the Lontrax repo, which GitHub Actions refreshes every hour (tools/precos.py).</summary>
+    public GitHubClient? Shared { get; set; }
+    public const string SharedRef = "precos";
+    string? sharedSha;
+
+    public bool UsingShared => !Api.HasKeys;
+    public bool CanFetch => Api.HasKeys || !string.IsNullOrEmpty(Shared?.Token);
+
+    /// <summary>Prices for one house: from Blizzard with the person's own key, or from the shared file.</summary>
+    /// <summary>Asks Blizzard for a token and one small page: throws a MarketException when the key is wrong.</summary>
+    public async Task CheckKeys()
+    {
+        Api.ForgetToken();
+        using var _ = await Api.GetJson("/data/wow/ruleset/index", BlizzardClient.DynamicNs);
+    }
+
+    public Task<bool> Refresh(int house, bool keepHistory = true) =>
+        Api.HasKeys ? RefreshHouse(house, keepHistory) : RefreshShared(house, keepHistory);
+
+    async Task<bool> RefreshShared(int house, bool keepHistory)
+    {
+        if (Shared == null || string.IsNullOrEmpty(Shared.Token)) throw new MarketException("Entre com o GitHub para ver os preços da galera.");
+        var old = GetSnapshot(house);
+        try
+        {
+            // Cheap check first: the branch has one commit per hour; skip the download when nothing changed.
+            var c = await Shared.GetLatestCommit(Config.CatalogRepo, SharedRef);
+            if (c.Sha == sharedSha && old != null) { old.Fetched = DateTime.UtcNow; return false; }
+            var raw = await Shared.GetRawFile(Config.CatalogRepo, $"casa-{house}.json", SharedRef);
+            var snap = JsonSerializer.Deserialize<Snapshot>(raw) ?? throw new MarketException("O arquivo de preços veio vazio.");
+            sharedSha = c.Sha;
+            snap.Fetched = DateTime.UtcNow;
+            if (old != null && old.LastModified >= snap.LastModified) { old.Fetched = snap.Fetched; return false; }
+            snaps[house] = snap;
+            File.WriteAllText(Path.Combine(Dir, $"casa-{house}.json"), JsonSerializer.Serialize(snap, Json));
+            if (keepHistory) AddHistory(house, snap);
+            return true;
+        }
+        catch (GitHubException ex) { throw new MarketException("Preços da galera: " + ex.Message); }
+    }
+
     // ---------- history (14 days, only items used by recipes) ----------
     History GetHistory(int house)
     {
@@ -510,7 +554,7 @@ sealed class Market
         {
             var h = hs[i];
             var s = GetSnapshot(h.Id);
-            if (s == null || DateTime.UtcNow - s.Fetched > TimeSpan.FromHours(2)) { await RefreshHouse(h.Id, keepHistory: false); s = GetSnapshot(h.Id); }
+            if (s == null || DateTime.UtcNow - s.Fetched > TimeSpan.FromHours(2)) { await Refresh(h.Id, keepHistory: false); s = GetSnapshot(h.Id); }
             progress?.Report((i + 1.0) / hs.Count);
             if (s == null) continue;
             list.Add(new

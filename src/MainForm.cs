@@ -72,6 +72,7 @@ sealed class MainForm : Form
         checkTimer.Tick += async (_, _) => await BackgroundCheck(false);
         checkTimer.Start();
         market.LoadKeys(settings);
+        market.Shared = gh; // no own key: prices come from the Lontrax repo (updated hourly by GitHub)
         marketTimer.Tick += async (_, _) => await MarketTick(manual: false);
         marketTimer.Start();
 
@@ -282,7 +283,7 @@ sealed class MainForm : Form
                 case "ready":
                     SendState();
                     // Mercado gets ready in the background, so the tab is already filled when clicked.
-                    if (market.Api.HasKeys) _ = MarketInit();
+                    if (market.CanFetch) _ = MarketInit();
                     if (gh.Token != null)
                     {
                         if (startHidden) await BackgroundCheck(false); // started with Windows: just notify
@@ -314,12 +315,17 @@ sealed class MainForm : Form
                 case "ahInit": await MarketInit(); break;
                 case "ahSaveKeys":
                     market.SaveKeys(settings, (string?)m!["id"], (string?)m["secret"]);
-                    try { await market.LoadHouses(); }
-                    catch (MarketException ex) when (ex.BadKeys) { market.SaveKeys(settings, null, null); throw; }
-                    Toast("ok", "Chave da Blizzard salva!");
+                    try { await market.CheckKeys(); }
+                    catch (MarketException) { market.SaveKeys(settings, null, null); SendMarketState(); throw; }
+                    Toast("ok", "Chave da Blizzard salva! Agora os preços vêm direto da Blizzard.");
                     await MarketInit();
                     break;
-                case "ahForgetKeys": market.SaveKeys(settings, null, null); SendMarketState(); break;
+                case "ahForgetKeys":
+                    market.SaveKeys(settings, null, null);
+                    Toast("ok", "Pronto: usando os preços da galera.");
+                    await MarketTick(manual: false);
+                    SendMarketState(); SendMarketRows();
+                    break;
                 case "ahSetHouse":
                     settings.AhHouse = (int?)m!["id"];
                     settings.Save();
@@ -621,7 +627,8 @@ sealed class MainForm : Form
         Post(new
         {
             type = "ahState",
-            hasKeys = market.Api.HasKeys,
+            hasKeys = market.CanFetch,
+            chavePropria = market.Api.HasKeys,
             casas = market.Houses.Select(x => new { id = x.Id, nome = x.Name, faccao = x.Faction }),
             casa = settings.AhHouse,
             profissoes = market.Book?.Professions.Select(p => new { id = p.Id, nome = p.Name, receitas = p.Recipes.Count }),
@@ -641,7 +648,7 @@ sealed class MainForm : Form
 
     async Task MarketInit()
     {
-        if (!market.Api.HasKeys) { SendMarketState(); return; }
+        if (!market.CanFetch) { SendMarketState(); return; }
         await RunMarket("receitas", async () =>
         {
             await market.LoadHouses();
@@ -674,12 +681,12 @@ sealed class MainForm : Form
     /// <summary>Every 15 minutes: asks Blizzard whether the house has a newer dump (cheap when nothing changed).</summary>
     async Task MarketTick(bool manual)
     {
-        if (!market.Api.HasKeys || settings.AhHouse is not int h) { if (manual) SendMarketState(); return; }
+        if (!market.CanFetch || settings.AhHouse is not int h) { if (manual) SendMarketState(); return; }
         var fresh = false;
         var ok = await RunMarket("precos", async () =>
         {
             if (market.Book == null) { await market.LoadHouses(); await market.LoadRecipes(MarketProgress("receitas")); }
-            fresh = await market.RefreshHouse(h);
+            fresh = await market.Refresh(h);
         });
         if (!ok) return;
         SendMarketState();

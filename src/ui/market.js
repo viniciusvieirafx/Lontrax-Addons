@@ -67,9 +67,15 @@
     });
     sel.value = st.casa == null ? "" : String(st.casa);
 
-    $("ah-status").innerHTML = st.atualizado
-      ? `Preços da Blizzard de <b>${esc(st.atualizado)}</b> · checado às ${esc(st.checado)}`
-      : st.casa == null ? "Escolha a sua Casa de Leilões." : "";
+    const fonte = st.chavePropria ? "sua chave" : "preços da galera";
+    $("ah-status").innerHTML = (st.atualizado
+      ? `Preços da Blizzard de <b>${esc(st.atualizado)}</b> · checado às ${esc(st.checado)} · ${fonte}`
+      : st.casa == null ? "Escolha a sua Casa de Leilões." : "") +
+      ` · <button class="link small" id="ah-key-toggle" type="button">${st.chavePropria ? "usar preços da galera" : "usar minha chave"}</button>`;
+    $("ah-key-toggle").addEventListener("click", () => {
+      if (st.chavePropria) { if (confirm("Parar de usar a sua chave da Blizzard e usar os preços da galera?")) send("ahForgetKeys"); }
+      else { $("ah-main").hidden = true; $("ah-setup").hidden = false; $("ah-setup-back").hidden = false; }
+    });
 
     const chips = $("ah-profs");
     chips.innerHTML = "";
@@ -270,6 +276,7 @@
     $("ah-save-keys").disabled = true;
     send("ahSaveKeys", { id, secret });
   });
+  $("ah-setup-back").addEventListener("click", () => { $("ah-setup-back").hidden = true; renderState(); });
   $("ah-house").addEventListener("change", (e) => { if (e.target.value) pickHouse(+e.target.value); });
   $("ah-which").addEventListener("click", openCompare);
   $("ah-compare-close").addEventListener("click", closeCompare);
