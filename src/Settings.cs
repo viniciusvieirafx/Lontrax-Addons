@@ -17,6 +17,16 @@ sealed class Settings
     /// <summary>Last version (commit) we already told the person about, per addon id.</summary>
     public Dictionary<string, string> Notified { get; set; } = new();
 
+    // ---------- Mercado (auction house) ----------
+    /// <summary>Battle.net Client ID + Secret, encrypted for this Windows user.</summary>
+    public string? BlizzardKeysProtected { get; set; }
+    public int? AhHouse { get; set; }
+    public List<int> AhProfessions { get; set; } = new();
+    /// <summary>Notify (Windows balloon) when a craft gives at least this much gold profit. 0 = off.</summary>
+    public int AhAlertGold { get; set; }
+    /// <summary>Recipe ids already announced, with the hour they were announced (no repeat for 6 h).</summary>
+    public Dictionary<int, long> AhAlerted { get; set; } = new();
+
     static string FilePath => Path.Combine(Config.DataDir, "config.json");
     static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 

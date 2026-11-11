@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@500;600;700&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="market.css">
 </head>
 <body>
 <div class="sky" aria-hidden="true"></div>
@@ -83,6 +84,92 @@
     <button class="btn gold sm" id="btn-update-app" type="button">Atualizar o app</button>
   </div>
 
+  <nav class="tabs" role="tablist">
+    <button class="tab-btn active" data-tab="addons" role="tab">Addons</button>
+    <button class="tab-btn" data-tab="mercado" role="tab">Mercado <span class="tab-sub">Casa de Leilões</span></button>
+  </nav>
+
+  <!-- ===================== Mercado ===================== -->
+  <div class="tab-pane" id="tab-mercado" hidden>
+    <!-- no Battle.net key yet -->
+    <div class="ah-setup" id="ah-setup" hidden>
+      <div class="plaque left">
+        <h3 class="pane-title">Conectar com a Blizzard</h3>
+        <p>O Mercado lê os preços da Casa de Leilões direto da <b>API oficial da Blizzard</b> (não mexe no jogo, sem risco de ban).
+          Cada pessoa usa a própria chave, que é grátis:</p>
+        <ol class="steps">
+          <li>Abra o site, entre com a conta Battle.net, aceite os termos e vá em <b>API Access → Create Client</b>.</li>
+          <li>Nome: <code>Lontrax AH</code> · Redirect URL: <code>http://localhost</code> · Salvar.</li>
+          <li>Copie o <b>Client ID</b> e o <b>Client Secret</b> e cole aqui embaixo.</li>
+        </ol>
+        <button class="btn ghost sm" id="ah-open-bnet" type="button">Abrir develop.battle.net</button>
+        <div class="ah-form">
+          <label>Client ID <input id="ah-id" autocomplete="off" spellcheck="false"></label>
+          <label>Client Secret <input id="ah-secret" type="password" autocomplete="off" spellcheck="false"></label>
+          <button class="btn gold" id="ah-save-keys" type="button">Conectar</button>
+        </div>
+        <p class="hint">A chave fica guardada com criptografia só neste computador.</p>
+      </div>
+    </div>
+
+    <div class="ah-main" id="ah-main" hidden>
+      <div class="ah-bar">
+        <label class="ah-field">
+          <span class="path-label">Casa de Leilões</span>
+          <select id="ah-house"></select>
+        </label>
+        <button class="link small" id="ah-which" type="button">Qual é a minha?</button>
+        <span class="ah-status" id="ah-status"></span>
+        <div class="progress ah-progress" id="ah-progress" hidden><div class="bar"></div></div>
+        <button class="btn ghost sm" id="ah-refresh" type="button"><span class="i-refresh"></span> Atualizar preços</button>
+      </div>
+
+      <div class="chips" id="ah-profs"></div>
+
+      <div class="ah-bar filters">
+        <input class="ah-search" id="ah-search" placeholder="Procurar item ou material…" spellcheck="false">
+        <label class="opt"><input type="checkbox" id="ah-only-complete" checked> Só receitas com todos os materiais à venda</label>
+        <label class="opt"><input type="checkbox" id="ah-only-profit" checked> Só com lucro</label>
+        <label class="opt">À venda no mínimo
+          <select id="ah-min-qty"><option value="0">qualquer</option><option value="2">2</option><option value="5" selected>5</option><option value="10">10</option><option value="25">25</option></select>
+        </label>
+        <label class="opt">Avisar se lucro ≥ <input type="number" id="ah-alert" min="0" step="1" class="ah-num"> g</label>
+      </div>
+
+      <div class="ah-body">
+        <div class="ah-table-wrap">
+          <table class="ah-table">
+            <thead><tr>
+              <th data-sort="nome">Item</th>
+              <th data-sort="profissao">Profissão</th>
+              <th data-sort="custo" class="num">Custo</th>
+              <th data-sort="venda" class="num">Vende por</th>
+              <th data-sort="lucro" class="num sorted desc">Lucro</th>
+              <th data-sort="margem" class="num">Margem</th>
+              <th data-sort="aVenda" class="num">À venda</th>
+              <th data-sort="tendencia" class="num">24h</th>
+            </tr></thead>
+            <tbody id="ah-rows"></tbody>
+          </table>
+          <p class="empty" id="ah-empty" hidden></p>
+        </div>
+        <aside class="ah-detail" id="ah-detail" hidden></aside>
+      </div>
+    </div>
+
+    <div class="modal" id="ah-compare" hidden>
+      <div class="plaque modal-box">
+        <h3 class="pane-title">Qual é a sua Casa de Leilões?</h3>
+        <p>O Forever tem várias casas da Aliança e a Blizzard não diz qual é de qual servidor.
+          Abra a Casa de Leilões no jogo, procure estes itens e veja o <b>preço mais barato</b>. A casa com os preços iguais é a sua.</p>
+        <div id="ah-compare-body"><p class="waiting"><span class="spinner"></span> Baixando os preços de cada casa…</p></div>
+        <div class="row"><button class="btn ghost sm" id="ah-compare-close" type="button">Fechar</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== Addons ===================== -->
+  <div class="tab-pane" id="tab-addons">
   <div class="banner" id="banner" hidden><span class="banner-text" id="banner-text"></span></div>
 
   <div class="toolbar">
@@ -100,6 +187,7 @@
   <div class="warn" id="wow-warning" hidden>⚔ O WoW está aberto. Pode atualizar, mas depois digite <b>/reload</b> no jogo.</div>
 
   <main class="grid" id="grid"></main>
+  </div>
 
   <footer class="foot">
     <span id="foot-text">Pela Aliança!</span>
@@ -138,5 +226,6 @@
 </template>
 
 <script src="app.js"></script>
+<script src="market.js"></script>
 </body>
 </html>

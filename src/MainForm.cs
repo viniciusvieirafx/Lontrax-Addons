@@ -69,6 +69,9 @@ sealed class MainForm : Form
         tray.BalloonTipClicked += (_, _) => ShowWindow();
         checkTimer.Tick += async (_, _) => await BackgroundCheck(false);
         checkTimer.Start();
+        market.LoadKeys(settings);
+        marketTimer.Tick += async (_, _) => await MarketTick(manual: false);
+        marketTimer.Start();
 
         if (startHidden)
         {
@@ -302,12 +305,52 @@ sealed class MainForm : Form
                 case "openFolder": if (settings.AddOnsPath != null) Process.Start("explorer.exe", settings.AddOnsPath); break;
                 case "openUrl": OpenUrl((string?)m!["url"]); break;
                 case "copy": SafeCopy((string?)m!["text"] ?? ""); break;
+
+                // ---------- Mercado ----------
+                case "ahInit": await MarketInit(); break;
+                case "ahSaveKeys":
+                    market.SaveKeys(settings, (string?)m!["id"], (string?)m["secret"]);
+                    try { await market.LoadHouses(); }
+                    catch (MarketException ex) when (ex.BadKeys) { market.SaveKeys(settings, null, null); throw; }
+                    Toast("ok", "Chave da Blizzard salva!");
+                    await MarketInit();
+                    break;
+                case "ahForgetKeys": market.SaveKeys(settings, null, null); SendMarketState(); break;
+                case "ahSetHouse":
+                    settings.AhHouse = (int?)m!["id"];
+                    settings.Save();
+                    await MarketTick(manual: true);
+                    break;
+                case "ahSetProfs":
+                    settings.AhProfessions = m!["ids"]!.AsArray().Select(x => (int)x!).ToList();
+                    settings.Save();
+                    SendMarketRows();
+                    break;
+                case "ahSetAlert":
+                    settings.AhAlertGold = Math.Max(0, (int?)m!["gold"] ?? 0);
+                    settings.Save();
+                    break;
+                case "ahRefresh": await MarketTick(manual: true); break;
+                case "ahRecipes":
+                    await RunMarket("receitas", () => market.LoadRecipes(MarketProgress("receitas"), force: true));
+                    SendMarketState(); SendMarketRows();
+                    break;
+                case "ahCompare":
+                    var fac = (string?)m!["faction"] ?? "Aliança";
+                    List<object>? cmp = null;
+                    await RunMarket("comparar", async () => cmp = await market.CompareHouses(fac, MarketProgress("comparar")));
+                    if (cmp != null) Post(new { type = "ahCompare", faction = fac, casas = cmp });
+                    break;
+                case "ahHistory":
+                    if (settings.AhHouse is int hh)
+                        Post(new { type = "ahHistory", item = (int)m!["item"]!, pontos = market.ItemHistory(hh, (int)m["item"]!) });
+                    break;
             }
         }
         catch (Exception ex)
         {
             LogError(cmd ?? "?", ex);
-            Toast("erro", ex is GitHubException ? ex.Message : "Algo deu errado: " + ex.Message);
+            Toast("erro", ex is GitHubException or MarketException ? ex.Message : "Algo deu errado: " + ex.Message);
             if (ex is GitHubException { Status: System.Net.HttpStatusCode.Unauthorized }) Logout();
         }
     }
@@ -528,10 +571,112 @@ sealed class MainForm : Form
         SendAddons();
     }
 
+    // ---------- Mercado: auction house prices and craft profit ----------
+    readonly Market market = new();
+    readonly System.Windows.Forms.Timer marketTimer = new() { Interval = 15 * 60 * 1000 };
+    bool marketBusy;
+
+    IProgress<double> MarketProgress(string what) => new SyncProgress(p => Post(new { type = "ahProgress", what, value = p }));
+
+    /// <summary>Runs one market job at a time and turns its errors into a message on screen.</summary>
+    async Task<bool> RunMarket(string what, Func<Task> job)
+    {
+        if (marketBusy) return false;
+        marketBusy = true;
+        Post(new { type = "ahProgress", what, value = 0.01 });
+        try { await job(); return true; }
+        catch (MarketException ex)
+        {
+            LogError("market", ex);
+            Post(new { type = "ahError", text = ex.Message, badKeys = ex.BadKeys });
+            return false;
+        }
+        catch (Exception ex)
+        {
+            LogError("market", ex);
+            Post(new { type = "ahError", text = "Algo deu errado no Mercado: " + ex.Message });
+            return false;
+        }
+        finally { marketBusy = false; Post(new { type = "ahProgressEnd", what }); }
+    }
+
+    void SendMarketState()
+    {
+        var snap = settings.AhHouse is int h ? market.GetSnapshot(h) : null;
+        Post(new
+        {
+            type = "ahState",
+            hasKeys = market.Api.HasKeys,
+            casas = market.Houses.Select(x => new { id = x.Id, nome = x.Name, faccao = x.Faction }),
+            casa = settings.AhHouse,
+            profissoes = market.Book?.Professions.Select(p => new { id = p.Id, nome = p.Name, receitas = p.Recipes.Count }),
+            escolhidas = settings.AhProfessions,
+            alerta = settings.AhAlertGold,
+            atualizado = snap?.LastModified.ToLocalTime().ToString("dd/MM HH:mm"),
+            checado = snap?.Fetched.ToLocalTime().ToString("HH:mm"),
+            taxa = Market.AhCut,
+        });
+    }
+
+    void SendMarketRows()
+    {
+        if (settings.AhHouse is not int h || market.Book == null) return;
+        Post(new { type = "ahRows", rows = market.Compute(h, settings.AhProfessions) });
+    }
+
+    async Task MarketInit()
+    {
+        if (!market.Api.HasKeys) { SendMarketState(); return; }
+        await RunMarket("receitas", async () =>
+        {
+            await market.LoadHouses();
+            await market.LoadRecipes(MarketProgress("receitas"));
+        });
+        SendMarketState();
+        SendMarketRows();
+        if (settings.AhHouse is int h && (market.GetSnapshot(h) is not { } s || DateTime.UtcNow - s.Fetched > TimeSpan.FromMinutes(20)))
+            await MarketTick(manual: false);
+    }
+
+    /// <summary>Every 15 minutes: asks Blizzard whether the house has a newer dump (cheap when nothing changed).</summary>
+    async Task MarketTick(bool manual)
+    {
+        if (!market.Api.HasKeys || settings.AhHouse is not int h) { if (manual) SendMarketState(); return; }
+        var fresh = false;
+        var ok = await RunMarket("precos", async () =>
+        {
+            if (market.Book == null) { await market.LoadHouses(); await market.LoadRecipes(MarketProgress("receitas")); }
+            fresh = await market.RefreshHouse(h);
+        });
+        if (!ok) return;
+        SendMarketState();
+        if (fresh || manual) SendMarketRows();
+        if (manual && !fresh) Post(new { type = "ahInfo", text = "Os preços já estão em dia. A Blizzard atualiza mais ou menos de hora em hora." });
+        if (fresh) MarketAlert(h);
+    }
+
+    void MarketAlert(int house)
+    {
+        if (settings.AhAlertGold <= 0) return;
+        var nowHour = DateTimeOffset.UtcNow.ToUnixTimeSeconds() / 3600;
+        var best = market.Compute(house, settings.AhProfessions)
+            .Where(r => r.lucro >= settings.AhAlertGold * 10000L && r.aVenda > 0)
+            .Where(r => !settings.AhAlerted.TryGetValue(r.receita, out var at) || nowHour - at >= 6)
+            .OrderByDescending(r => r.lucro).Take(3).ToList();
+        if (best.Count == 0) return;
+        foreach (var r in best) settings.AhAlerted[r.receita] = nowHour;
+        foreach (var k in settings.AhAlerted.Where(k => nowHour - k.Value > 48).Select(k => k.Key).ToList()) settings.AhAlerted.Remove(k);
+        settings.Save();
+        static string G(long c) => c >= 10000 ? $"{c / 10000}g {c / 100 % 100}s" : $"{c / 100}s {c % 100}c";
+        tray.ShowBalloonTip(8000, "Mercado: craft com lucro!",
+            string.Join("\n", best.Select(r => $"{r.nome}: +{G(r.lucro!.Value)}")), ToolTipIcon.Info);
+    }
+
     static void OpenUrl(string? url)
     {
         if (url == null) return;
-        if (!(url.StartsWith("https://github.com/") || url.StartsWith("https://git-scm.com/") || url.StartsWith("https://go.microsoft.com/"))) return;
+        if (!(url.StartsWith("https://github.com/") || url.StartsWith("https://git-scm.com/") || url.StartsWith("https://go.microsoft.com/")
+              || url.StartsWith("https://develop.battle.net/"))) return;
         Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
     }
 }

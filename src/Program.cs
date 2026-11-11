@@ -7,6 +7,8 @@ static class Program
     {
         if (args.Length >= 2 && args[0] == "--selftest")
             return SelfTest.Run(args[1]).GetAwaiter().GetResult();
+        if (args.Length >= 4 && args[0] == "--selftest-market")
+            return SelfTest.RunMarket(args[1], args[2], int.Parse(args[3])).GetAwaiter().GetResult();
         if (args.Length >= 2 && args[0] == "--selftest-update")
             return SelfTest.RunUpdate(args[1]).GetAwaiter().GetResult();
 
