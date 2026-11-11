@@ -240,6 +240,15 @@ sealed class Market
         catch { return default; }
     }
 
+    /// <summary>English names (src\data\nomes-en.json, made by tools\nomes_en.py) for the PT | EN toggle.</summary>
+    public static string? EnglishNamesJson()
+    {
+        using var s = typeof(Market).Assembly.GetManifestResourceStream("data.nomes-en.json");
+        if (s == null) return null;
+        using var r = new StreamReader(s);
+        return r.ReadToEnd();
+    }
+
     public bool RecipesStale => Book == null || DateTime.UtcNow - Book.Fetched > TimeSpan.FromDays(7);
 
     /// <summary>Loads recipes from disk or the built-in copy (instant). Downloads from Blizzard only when there is

@@ -44,6 +44,11 @@
 .ah-search { width: 260px; }
 
 .ah-bar.char { padding-top: 6px; padding-bottom: 0; }
+.lang { margin-left: auto; display: inline-flex; border: 1px solid rgba(217,180,90,.45); border-radius: 8px; overflow: hidden; }
+.lang button { background: rgba(8,17,41,.75); color: var(--muted); border: 0; padding: 5px 11px; cursor: pointer; font: 700 12px var(--serif); letter-spacing: .08em; }
+.lang button + button { border-left: 1px solid rgba(217,180,90,.3); }
+.lang button:hover { color: var(--gold-hi); }
+.lang button.on { color: #2a1d05; background: linear-gradient(180deg, var(--gold-hi), var(--gold)); }
 .ah-char { width: 230px; }
 .ah-charinfo { color: var(--muted); font-size: 13px; }
 .ah-charinfo b { color: var(--gold-hi); font-weight: 700; }

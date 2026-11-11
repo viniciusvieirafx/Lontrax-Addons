@@ -9,6 +9,20 @@
   let known = null;     // Set of recipe ids the chosen character knows
   let charsAsked = false;
   let craftQty = 1;     // "Para fazer N×" in the detail panel
+
+  // ---------- PT | EN item names ----------
+  let EN = null;        // {profissoes, categorias, receitas, itens} from src/data/nomes-en.json
+  let lang = null;
+  const nameEn = (r) => EN && (EN.itens[r.item] || EN.receitas[r.receita]);
+  const tName = (r) => (lang === "en" && nameEn(r)) || r.nome;
+  const tMat = (m) => (lang === "en" && EN && EN.itens[m.id]) || m.nome;
+  const tCat = (r) => (lang === "en" && EN && EN.categorias[r.receita]) || r.categoria;
+  const tProfId = (id, pt) => (lang === "en" && EN && EN.profissoes[id]) || pt;
+  const tProf = (pt) => {
+    if (lang !== "en" || !EN) return pt;
+    const p = (st.profissoes || []).find((x) => x.nome === pt);
+    return (p && EN.profissoes[p.id]) || pt;
+  };
   let rows = [];        // every recipe of the chosen professions
   let sortKey = "lucro", sortDir = -1;
   let selected = null;  // recipe id shown on the right
@@ -86,7 +100,7 @@
     const levels = {};
     (pj ? pj.profissoes : []).forEach((p) => (levels[p.id] = p));
     $("ah-charinfo").innerHTML = pj
-      ? pj.profissoes.filter((p) => p.max > 0).map((p) => `<span class="lvl">${esc(p.nome)} <b>${p.nivel}</b>/${p.max}</span>`).join("") +
+      ? pj.profissoes.filter((p) => p.max > 0).map((p) => `<span class="lvl">${esc(tProfId(p.id, p.nome))} <b>${p.nivel}</b>/${p.max}</span>`).join("") +
         `<span class="flat" title="A Blizzard atualiza a ficha quando você desloga">· ficha de ${esc(pj.lido)}</span>`
       : "Escolha seu personagem para ver só o que você sabe fazer.";
     known = pj ? new Set(pj.conhecidas || []) : null;
@@ -107,7 +121,7 @@
       const b = document.createElement("button");
       b.type = "button";
       b.className = "chip" + (chosen.has(p.id) ? " on" : "");
-      b.innerHTML = `${esc(p.nome)}` + (levels[p.id] ? `<span class="lv" title="Seu nível">${levels[p.id].nivel}</span>` : `<span class="n">${p.receitas}</span>`);
+      b.innerHTML = `${esc(tProfId(p.id, p.nome))}` + (levels[p.id] ? `<span class="lv" title="Seu nível">${levels[p.id].nivel}</span>` : `<span class="n">${p.receitas}</span>`);
       b.addEventListener("click", () => {
         const s = new Set(st.escolhidas || []);
         s.has(p.id) ? s.delete(p.id) : s.add(p.id);
@@ -142,10 +156,11 @@
       if (onlyComplete && !r.completo) return false;
       if (onlyProfit && !(r.lucro > 0)) return false;
       if (r.aVenda < minQty) return false;
-      if (q && !(r.nome.toLowerCase().includes(q) || r.materiais.some((m) => m.nome.toLowerCase().includes(q)))) return false;
+      if (q && !([r.nome, nameEn(r)].some((x) => x && x.toLowerCase().includes(q)) ||
+        r.materiais.some((m) => [m.nome, EN && EN.itens[m.id]].some((x) => x && x.toLowerCase().includes(q))))) return false;
       return true;
     });
-    const val = (r) => (sortKey === "tendencia" ? trend(r) : r[sortKey]);
+    const val = (r) => (sortKey === "tendencia" ? trend(r) : sortKey === "nome" ? tName(r) : sortKey === "profissao" ? tProf(r.profissao) : r[sortKey]);
     list.sort((a, b) => {
       let x = val(a), y = val(b);
       if (x == null && y == null) return 0;
@@ -170,8 +185,8 @@
       const tTxt = t == null ? "—" : (t > 0 ? "▲ " : t < 0 ? "▼ " : "") + Math.abs(Math.round(t * 100)) + "%";
       const qtd = r.qtdFeita > 1 ? ` <span class="flat">x${r.qtdFeita}</span>` : "";
       tr.innerHTML =
-        `<td class="item" title="${esc(r.nome)}">${esc(r.nome)}${qtd}</td>` +
-        `<td class="prof">${esc(r.profissao)}</td>` +
+        `<td class="item" title="${esc(tName(r))}">${esc(tName(r))}${qtd}</td>` +
+        `<td class="prof">${esc(tProf(r.profissao))}</td>` +
         `<td class="num">${r.completo ? money(r.custo) : '<span class="neg">falta material</span>'}</td>` +
         `<td class="num">${money(r.venda)}</td>` +
         `<td class="num ${r.lucro > 0 ? "pos" : "neg"}">${money(r.lucro)}</td>` +
@@ -215,23 +230,23 @@
     if (!r) { d.hidden = true; return; }
     d.hidden = false;
     const fee = r.venda == null ? null : Math.round(r.venda * (st.taxa || 0.05));
-    let h = `<button class="ah-close" id="ah-close" type="button" title="Fechar">×</button><h4>${esc(r.nome)}</h4><div class="sub">${esc(r.profissao)} · ${esc(r.categoria)}${r.qtdFeita > 1 ? ` · faz ${r.qtdFeita} por vez` : ""}</div>`;
+    let h = `<button class="ah-close" id="ah-close" type="button" title="Fechar">×</button><h4>${esc(tName(r))}</h4><div class="sub">${esc(tProf(r.profissao))} · ${esc(tCat(r))}${r.qtdFeita > 1 ? ` · faz ${r.qtdFeita} por vez` : ""}</div>`;
     // "To craft N× item you need": the shopping list, multiplied by how many you want to craft.
     const n = craftQty;
     const sabe = known ? (known.has(r.receita) ? '<span class="know yes">✓ Você já sabe essa receita</span>' : '<span class="know no">Você ainda não aprendeu essa receita</span>') : "";
     // Plain sentence: "Para fazer 5 X você precisa de 50 A, 5 B e 5 C."
-    const parts = r.materiais.map((m) => `<b>${m.qtd * n} ${esc(m.nome)}</b>`);
+    const parts = r.materiais.map((m) => `<b>${m.qtd * n} ${esc(tMat(m))}</b>`);
     const joined = parts.length > 1 ? parts.slice(0, -1).join(", ") + " e " + parts[parts.length - 1] : parts.join("");
     const made = n * r.qtdFeita;
     h += `<div class="need">
-      <p class="need-s">Para fazer <b>${made} ${esc(r.nome)}</b> você precisa de ${joined}.</p>
+      <p class="need-s">Para fazer <b>${made} ${esc(tName(r))}</b> você precisa de ${joined}.</p>
       <div class="need-h">Quantas vezes craftar: <input type="number" id="ah-qty" class="ah-qty" min="1" max="999" value="${n}"></div>
       <ul class="need-list">`;
     r.materiais.forEach((m) => {
       const where = m.fonte === "npc" ? '<span class="src npc">NPC</span>' : m.fonte === "ah" ? '<span class="src ah">AH</span>' : '<span class="src falta">SEM OFERTA</span>';
       const each = m.preco == null ? "" : ` <span class="flat">(${money(m.preco)} cada${m.fonte === "ah" ? ` · ${m.aVenda} à venda` : ""})</span>`;
       const short = m.fonte === "ah" && m.aVenda < m.qtd * n ? ' <span class="thin">não tem tudo na AH</span>' : "";
-      h += `<li><b class="q">${m.qtd * n}×</b> ${esc(m.nome)} ${where}${each}${short}<span class="tot">${m.preco == null ? "—" : money(m.preco * m.qtd * n)}</span></li>`;
+      h += `<li><b class="q">${m.qtd * n}×</b> ${esc(tMat(m))} ${where}${each}${short}<span class="tot">${m.preco == null ? "—" : money(m.preco * m.qtd * n)}</span></li>`;
     });
     h += `</ul>
       <div class="need-f"><span>Total dos materiais</span><b>${r.completo ? money(r.custo * n) : "incompleto"}</b></div>
@@ -319,6 +334,16 @@
     $("ah-save-keys").disabled = true;
     send("ahSaveKeys", { id, secret });
   });
+  // PT | EN: only item, material and profession names change; the rest of the screen stays in Portuguese.
+  function setLang(l) {
+    lang = l === "en" ? "en" : "pt";
+    LS("lontrax.lang", lang);
+    document.querySelectorAll(".lang button").forEach((b) => b.classList.toggle("on", b.dataset.lang === lang));
+    if (st.hasKeys !== undefined) { renderState(); renderRows(); renderDetail(); }
+  }
+  document.querySelectorAll(".lang button").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.lang)));
+  setLang(LS("lontrax.lang"));
+
   // Character picker: the guild list fills the suggestions the first time the box is used.
   $("ah-char").addEventListener("focus", () => { if (!charsAsked) { charsAsked = true; send("ahChars"); } });
   const loadChar = () => send("ahSetChar", { nome: $("ah-char").value.trim() });
@@ -348,6 +373,10 @@
     switch (m.type) {
       case "ahState": st = m; $("ah-save-keys").disabled = false; renderState(); if (!rows.length) renderRows(); break;
       case "ahRows": rows = m.rows || []; renderRows(); renderDetail(); break;
+      case "ahNames":
+        try { EN = JSON.parse(m.json); } catch (e) { EN = null; }
+        if (st.hasKeys !== undefined) { renderState(); renderRows(); renderDetail(); }
+        break;
       case "ahChars": {
         const dl = $("ah-char-list");
         dl.innerHTML = "";
@@ -412,6 +441,7 @@
       if (!d) return;
       rows = d.rows; st.profissoes = d.profissoes; st.escolhidas = [165];
       if (d.personagem) st.personagem = d.personagem;
+      fetch("nomes-en.json").then((r) => (r.ok ? r.json() : null)).then((n) => { if (n) { EN = n; renderState(); renderRows(); renderDetail(); } }).catch(() => {});
       selected = null; renderState(); renderRows(); renderDetail();
     }).catch(() => {});
   }

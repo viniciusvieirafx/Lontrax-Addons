@@ -312,7 +312,11 @@ sealed class MainForm : Form
                 case "copy": SafeCopy((string?)m!["text"] ?? ""); break;
 
                 // ---------- Mercado ----------
-                case "ahInit": await MarketInit(); break;
+                case "ahInit":
+                    // English names for the PT | EN toggle (sent as raw JSON, parsed by the page).
+                    if (Market.EnglishNamesJson() is string en) Post(new { type = "ahNames", json = en });
+                    await MarketInit();
+                    break;
                 case "ahSaveKeys":
                     market.SaveKeys(settings, (string?)m!["id"], (string?)m["secret"]);
                     try { await market.CheckKeys(); }

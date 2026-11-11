@@ -9,7 +9,7 @@
     <AssemblyName>Lontrax Addons</AssemblyName>
     <RootNamespace>LontraxAddons</RootNamespace>
     <ApplicationIcon>..\assets\brasao.ico</ApplicationIcon>
-    <Version>1.3.3</Version>
+    <Version>1.4.0</Version>
     <Product>Lontrax Addons</Product>
     <Company>Lontrax</Company>
     <Description>Instala e atualiza os addons da galera Lontrax</Description>
@@ -38,6 +38,7 @@
     <!-- Mercado: recipes + house list, so the tab opens at once (refreshed from Blizzard weekly) -->
     <EmbeddedResource Include="data\receitas.json" LogicalName="data.receitas.json" />
     <EmbeddedResource Include="data\casas.json" LogicalName="data.casas.json" />
+    <EmbeddedResource Include="data\nomes-en.json" LogicalName="data.nomes-en.json" />
     <EmbeddedResource Include="..\assets\brasao.png" LogicalName="ui.brasao.png" />
     <EmbeddedResource Include="..\assets\brasao.ico" LogicalName="ui.brasao.ico" />
     <EmbeddedResource Include="ui\lontrinha-*.png" LogicalName="ui.%(Filename)%(Extension)" />
