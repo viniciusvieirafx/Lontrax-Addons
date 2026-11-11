@@ -690,7 +690,7 @@ sealed class Market
             {
                 id = h.Id,
                 anuncios = s.Prices.Values.Sum(p => p.Listings),
-                itens = check.Select(c => new { nome = c.name, preco = s.Prices.TryGetValue(c.id, out var p) ? p.Min : (long?)null }).ToList(),
+                itens = check.Select(c => new { id = c.id, nome = c.name, preco =s.Prices.TryGetValue(c.id, out var p) ? p.Min : (long?)null }).ToList(),
             });
         }
         return list;

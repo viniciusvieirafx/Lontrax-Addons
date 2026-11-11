@@ -28,6 +28,7 @@
   let selected = null;  // recipe id shown on the right
   let started = false;
   let compareOpen = false;
+  let lastCompare = null;
 
   const LS = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } };
 
@@ -297,7 +298,8 @@
   function renderCompare(m) {
     const casas = m.casas || [];
     if (!casas.length) { $("ah-compare-body").innerHTML = '<p class="note">Não consegui baixar os preços agora.</p>'; return; }
-    const names = casas[0].itens.map((i) => i.nome);
+    lastCompare = m;
+    const names = casas[0].itens.map((i) => (lang === "en" && EN && EN.itens[i.id]) || i.nome);
     let h = `<table class="cmp"><thead><tr><th>Casa</th>${names.map((n) => `<th>${esc(n)}</th>`).join("")}<th>Anúncios</th><th></th></tr></thead><tbody>`;
     casas.forEach((c, i) => {
       h += `<tr class="${c.id === st.casa ? "mine" : ""}"><td>${esc(m.faction)} ${i + 1} (casa ${c.id})</td>` +
@@ -340,6 +342,7 @@
     LS("lontrax.lang", lang);
     document.querySelectorAll(".lang button").forEach((b) => b.classList.toggle("on", b.dataset.lang === lang));
     if (st.hasKeys !== undefined) { renderState(); renderRows(); renderDetail(); }
+    if (compareOpen && lastCompare) renderCompare(lastCompare);
   }
   document.querySelectorAll(".lang button").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.lang)));
   setLang(LS("lontrax.lang"));
