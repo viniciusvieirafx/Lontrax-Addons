@@ -578,6 +578,37 @@ sealed class Market
         File.WriteAllText(Path.Combine(Dir, $"historico-{house}.json"), JsonSerializer.Serialize(h, Json));
     }
 
+    string? historySha;
+
+    /// <summary>The GitHub job keeps 14 days of prices (one point every 3 hours) for everyone, so the chart and the
+    /// 24h column work even when the app was closed. Merged into the local history (union by hour).</summary>
+    public async Task MergeSharedHistory(int house)
+    {
+        if (Shared == null || string.IsNullOrEmpty(Shared.Token)) return;
+        try
+        {
+            var c = await Shared.GetLatestCommit(Config.CatalogRepo, SharedRef);
+            if (c.Sha == historySha) return;
+            var raw = await Shared.GetRawFile(Config.CatalogRepo, $"historico-{house}.json", SharedRef);
+            var remote = JsonSerializer.Deserialize<History>(raw);
+            historySha = c.Sha;
+            if (remote == null || remote.Items.Count == 0) return;
+            var h = GetHistory(house);
+            var newest = remote.Items.Values.Where(l => l.Count > 0).Select(l => l[^1][0]).DefaultIfEmpty(0).Max();
+            var keep = newest - 14 * 24;
+            foreach (var (id, pts) in remote.Items)
+            {
+                var byHour = new SortedDictionary<long, long[]>();
+                if (h.Items.TryGetValue(id, out var mine)) foreach (var p in mine) byHour[p[0]] = p;
+                foreach (var p in pts) if (!byHour.ContainsKey(p[0])) byHour[p[0]] = p; // own hourly points win
+                h.Items[id] = byHour.Values.Where(p => p[0] >= keep).ToList();
+            }
+            File.WriteAllText(Path.Combine(Dir, $"historico-{house}.json"), JsonSerializer.Serialize(h, Json));
+        }
+        catch (GitHubException) { }       // file not there yet (first hours)
+        catch (JsonException) { }
+    }
+
     public List<long[]> ItemHistory(int house, int item) =>
         GetHistory(house).Items.TryGetValue(item, out var l) ? l : new List<long[]>();
 

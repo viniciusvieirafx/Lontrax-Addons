@@ -22,11 +22,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Pega o histórico anterior (ramo precos)
+        run: |
+          mkdir -p "$RUNNER_TEMP/anterior"
+          if git fetch -q --depth=1 origin precos; then
+            git archive FETCH_HEAD | tar -x -C "$RUNNER_TEMP/anterior"
+          fi
+
       - name: Baixa os preços
         env:
           BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
           BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
-        run: python3 tools/precos.py "$RUNNER_TEMP/precos"
+        run: python3 tools/precos.py "$RUNNER_TEMP/precos" "$RUNNER_TEMP/anterior"
 
       - name: Publica no ramo precos (um commit só, sem acumular histórico)
         env:

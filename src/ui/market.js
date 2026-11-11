@@ -260,7 +260,7 @@
 
   function chart(pts) {
     if (pts == null) return '<p class="note">Carregando…</p>';
-    if (pts.length < 2) return '<p class="note">O gráfico aparece depois de algumas horas com o app aberto (ele guarda um ponto por hora).</p>';
+    if (pts.length < 2) return '<p class="note">Ainda sem histórico deste item. A Lontrax guarda o preço de 3 em 3 horas (mesmo com o seu app fechado); o gráfico vai enchendo com os dias.</p>';
     const W = 320, H = 130, P = 6;
     const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[2]);
     const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);

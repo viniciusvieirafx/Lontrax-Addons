@@ -731,6 +731,7 @@ sealed class MainForm : Form
         {
             if (market.Book == null) { await market.LoadHouses(); await market.LoadRecipes(MarketProgress("receitas")); }
             fresh = await market.Refresh(h);
+            await market.MergeSharedHistory(h);
         });
         if (!ok) return;
         // Character sheet changes only after logout: re-read it now and then, quietly.

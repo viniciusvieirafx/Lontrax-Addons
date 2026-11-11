@@ -135,8 +135,59 @@ def guild_characters(tok, guild):
     return chars
 
 
-def main(out):
+HIST_STEP_H = 3      # one point every 3 hours
+HIST_DAYS = 14
+
+
+def recipe_items():
+    """Item ids used by the recipes shipped with the app (crafted items + reagents): only these get history."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "data", "receitas.json")
+    try:
+        book = json.load(open(path, encoding="utf-8"))
+    except Exception:
+        return None
+    ids = set()
+    for p in book.get("Professions", []):
+        for r in p.get("Recipes", []):
+            ids.add(r["Item"])
+            ids.update(g["Id"] for g in r.get("Reagents", []))
+    return ids
+
+
+def history(prev_dir, house, snap, items):
+    """Same format as the app's History: {"Items": {id: [[unix hour, min, market, qty], ...]}}.
+    Keeps the previous file (from the "precos" branch) and adds this snapshot's point."""
+    h = {"Items": {}}
+    if prev_dir:
+        try:
+            h = json.load(open(os.path.join(prev_dir, f"historico-{house}.json"), encoding="utf-8"))
+        except Exception:
+            pass
+    lm = datetime.datetime.fromisoformat(snap["LastModified"])
+    hour = int(lm.timestamp() // 3600)
+    slot = hour - hour % HIST_STEP_H
+    keep = hour - HIST_DAYS * 24
+    for item, p in snap["Prices"].items():
+        if items is not None and int(item) not in items:
+            continue
+        lst = h["Items"].setdefault(item, [])
+        point = [slot, p["Min"], p["Market"], p["Qty"]]
+        if lst and lst[-1][0] == slot:
+            lst[-1] = point
+        else:
+            lst.append(point)
+    for item in list(h["Items"]):
+        lst = [x for x in h["Items"][item] if x[0] >= keep]
+        if lst:
+            h["Items"][item] = lst
+        else:
+            del h["Items"][item]
+    return h
+
+
+def main(out, prev_dir=None):
     os.makedirs(out, exist_ok=True)
+    items = recipe_items()
     tok = token()
     idx, _ = get(tok, f"/data/wow/ruleset/{RULESET}/auctions/")
     houses = [h["id"] for h in idx["auctions"]]
@@ -148,6 +199,9 @@ def main(out):
         snap = snapshot(h, com, auc, lm)
         with open(os.path.join(out, f"casa-{h}.json"), "w", encoding="utf-8") as f:
             json.dump(snap, f, separators=(",", ":"))
+        if snap["Prices"]:
+            with open(os.path.join(out, f"historico-{h}.json"), "w", encoding="utf-8") as f:
+                json.dump(history(prev_dir, h, snap, items), f, separators=(",", ":"))
         resumo.append({"casa": h, "itens": len(snap["Prices"]), "atualizado": snap["LastModified"]})
         print(f"casa {h}: {len(snap['Prices'])} itens, Blizzard {snap['LastModified']}", flush=True)
     # Character sheets of the guild (profession level + known recipes), so friends without a key can
@@ -162,4 +216,4 @@ def main(out):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "out")
+    main(sys.argv[1] if len(sys.argv) > 1 else "out", sys.argv[2] if len(sys.argv) > 2 else None)

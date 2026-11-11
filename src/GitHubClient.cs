@@ -18,7 +18,9 @@ sealed class GitHubClient
 
     static HttpClient CreateHttp()
     {
-        var h = new HttpClient(new HttpClientHandler { AllowAutoRedirect = true }) { Timeout = TimeSpan.FromMinutes(5) };
+        // Compressed answers: the Mercado history file shrinks from ~3 MB to ~0.3 MB.
+        var h = new HttpClient(new HttpClientHandler { AllowAutoRedirect = true, AutomaticDecompression = System.Net.DecompressionMethods.All })
+        { Timeout = TimeSpan.FromMinutes(5) };
         h.DefaultRequestHeaders.UserAgent.ParseAdd("LontraxAddons/1.0");
         return h;
     }

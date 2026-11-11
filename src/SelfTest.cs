@@ -62,6 +62,8 @@ static class SelfTest
             var fresh = await m.Refresh(house);
             W($"house {house}: fresh={fresh} {t.Elapsed.TotalSeconds:0}s items={m.GetSnapshot(house)!.Prices.Count} lm={m.GetSnapshot(house)!.LastModified}");
             W($"second refresh (should be not-modified): fresh={await m.Refresh(house)}");
+            await m.MergeSharedHistory(house);
+            W($"history for Couro Leve (2318): {m.ItemHistory(house, 2318).Count} point(s)");
             var rows = m.Compute(house, Array.Empty<int>());
             W($"rows: {rows.Count}, complete {rows.Count(r => r.completo)}, priced {rows.Count(r => r.lucro != null)}, profitable {rows.Count(r => r.lucro > 0)}");
             foreach (var r in rows.Where(r => r.lucro > 0 && r.aVenda >= 5).OrderByDescending(r => r.lucro).Take(15))
