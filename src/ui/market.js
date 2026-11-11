@@ -182,8 +182,47 @@
     return list;
   }
 
+  // ---------- "Melhor do dia": one gold medal per player ----------
+  // Not just the biggest profit: what will really SELL today. Score = profit per craft
+  // × little competition (few on sale) × selling (stock went down in the last 24 h) × price not falling.
+  const sold24 = (r) => (r.estoquePico && r.estoquePico > r.aVenda ? (r.estoquePico - r.aVenda) / r.estoquePico : 0);
+  function bestScore(r) {
+    if (!(r.lucro > 0) || !r.completo || r.aVenda < 3) return 0; // < 3 on sale: the price can't be trusted
+    const competition = 1 / (1 + r.aVenda / 50);
+    const selling = 0.5 + sold24(r);
+    const t = trend(r);
+    const price = t == null ? 1 : t < -0.15 ? 0.6 : t < -0.05 ? 0.85 : t > 0.05 ? 1.1 : 1;
+    return r.lucro * competition * selling * price;
+  }
+  function pickBest(list) {
+    let best = null, bs = 0;
+    for (const r of list) { const s = bestScore(r); if (s > bs) { bs = s; best = r; } }
+    return best;
+  }
+  function renderBest(best) {
+    const box = $("ah-best");
+    if (!best) { box.hidden = true; return; }
+    const why = [];
+    why.push(`dá <b>${money(best.lucro)}</b> por craft`);
+    why.push(best.aVenda <= 60 ? `pouca concorrência (<b>${best.aVenda}</b> à venda)` : `${best.aVenda} à venda`);
+    const s = sold24(best);
+    if (s >= 0.15) why.push(`está vendendo: o estoque caiu <b>${Math.round(s * 100)}%</b> em 24 h`);
+    const t = trend(best);
+    if (t != null && t > 0.05) why.push(`preço subindo (▲ ${Math.round(t * 100)}%)`);
+    const pj = st.personagem;
+    box.innerHTML = `<span class="medal big" aria-hidden="true"><span>1</span></span>
+      <div class="best-txt"><div class="best-k">Melhor do dia${pj ? " para " + esc(pj.nome.split(" ")[0]) : ""}</div>
+      <div class="best-n">${esc(tName(best))} <span class="flat">· ${esc(tProf(best.profissao))}</span></div>
+      <div class="best-why">${why.join(" · ")}</div></div>
+      <button class="best-go" type="button">Ver receita</button>`;
+    box.querySelector(".best-go").addEventListener("click", () => { selected = best.receita; renderRows(); renderDetail(); });
+    box.hidden = false;
+  }
+
   function renderRows() {
     const list = visibleRows();
+    const best = pickBest(list);
+    renderBest(best);
     const body = $("ah-rows");
     body.innerHTML = "";
     const frag = document.createDocumentFragment();
@@ -194,8 +233,9 @@
     list.slice(0, 400).forEach((r) => {
       const tr = document.createElement("tr");
       const l = topL.get(r.receita), mg = topM.get(r.receita);
-      tr.className = [r.receita === selected && "sel", l && "top-lucro", mg && "top-margem", (l === 1 || (!l && mg === 1)) && "r1"].filter(Boolean).join(" ");
-      const tags = (l ? `<span class="top-tag lucro" title="${l}º que mais dá ouro">${l}º lucro</span>` : "") +
+      const isBest = best && r.receita === best.receita;
+      tr.className = [r.receita === selected && "sel", isBest && "best", l && "top-lucro", mg && "top-margem", (l === 1 || (!l && mg === 1)) && "r1"].filter(Boolean).join(" ");
+      const tags = (isBest ? `<span class="medal" title="Melhor do dia: lucro, pouca concorrência e vendendo bem"><span>1</span></span>` : "") + (l ?`<span class="top-tag lucro" title="${l}º que mais dá ouro">${l}º lucro</span>` : "") +
         (mg ? `<span class="top-tag margem" title="${mg}º melhor margem (lucro ÷ custo)">${mg}º margem</span>` : "");
       const t = trend(r);
       const tCls = t == null ? "flat" : t > 0.02 ? "up" : t < -0.02 ? "down" : "flat";
@@ -445,7 +485,7 @@
         .concat([116, 117].map((id) => ({ id, nome: "Casa de Leilões de Aguanegra", faccao: "Aguanegra" }))),
       profissoes: [[197, "Alfaiataria", 410], [171, "Alquimia", 160], [185, "Culinária", 120], [165, "Couraria", 592], [333, "Encantamento", 290], [202, "Engenharia", 300], [164, "Ferraria", 410], [186, "Mineração", 22], [129, "Primeiros Socorros", 14]].map(([id, nome, receitas]) => ({ id, nome, receitas })),
     };
-    const mk = (receita, nome, custo, venda, aVenda, ontem, mats) => ({
+    const mk = (receita, nome, custo, venda, aVenda, ontem, mats, estoquePico) => ({ estoquePico,
       receita, nome, profissao: "Couraria", categoria: "Braçadeiras", item: receita, qtdFeita: 1, custo, venda, vendaMercado: Math.round(venda * 1.08),
       lucro: Math.round(venda * 0.95) - custo, margem: (Math.round(venda * 0.95) - custo) / custo, aVenda, anuncios: aVenda, ontem, completo: true,
       materiais: mats || [{ id: 1, nome: "Couro Médio", qtd: 6, preco: 12000, fonte: "ah", aVenda: 300 }, { id: 2, nome: "Linha Fina", qtd: 2, preco: 100, fonte: "npc", aVenda: 0 }],
@@ -454,7 +494,7 @@
       mk(1, "Braçadeiras de Camurça Azul", 15165, 105200, 5, 98000),
       mk(2, "Luvas de Camurça Azul", 13343, 80600, 5, 90000),
       mk(3, "Colete de Couro Silvestre", 10403, 200000, 1, null),
-      mk(4, "Braçadeiras Barbarescas", 7025, 29600, 60, 29000),
+      mk(4, "Braçadeiras Barbarescas", 7025, 29600, 60, 29000, null, 140),
       mk(5, "Perneiras Escorpídeas Resistentes", 19470, 44000, 6, 40000),
     ]);
     showTab("mercado");

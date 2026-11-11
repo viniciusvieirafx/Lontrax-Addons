@@ -632,11 +632,22 @@ sealed class Market
         return best?[2];
     }
 
+    /// <summary>Highest stock seen in the last 24 hours (to tell if the item is selling), or null.</summary>
+    int? PeakQty(int house, int item)
+    {
+        var l = ItemHistory(house, item);
+        if (l.Count < 2) return null;
+        var from = l[^1][0] - 24;
+        long peak = 0;
+        foreach (var x in l) if (x[0] >= from && x.Length > 3 && x[3] > peak) peak = x[3];
+        return peak > 0 ? (int)peak : null;
+    }
+
     // ---------- profit ----------
     public sealed record ReagentRow(int id, string nome, int qtd, long? preco, string fonte, int aVenda);
     public sealed record Row(int receita, string nome, string profissao, string categoria, int item, double qtdFeita,
         long custo, long? venda, long? vendaMercado, long? lucro, double? margem, int aVenda, int anuncios,
-        long? ontem, bool completo, List<ReagentRow> materiais);
+        long? ontem, bool completo, List<ReagentRow> materiais, int? estoquePico);
 
     public List<Row> Compute(int house, IEnumerable<int> professionIds)
     {
@@ -667,7 +678,8 @@ sealed class Market
                 double? margin = profit == null || cost <= 0 ? null : (double)profit.Value / cost;
                 var day = outP == null ? null : DayAgo(house, r.Item);
                 rows.Add(new Row(r.Id, r.ItemName.Length > 0 ? r.ItemName : r.Name, prof.Name, r.Category, r.Item, r.Qty,
-                    cost, sell, sellMkt, profit, margin, outP?.Qty ?? 0, outP?.Listings ?? 0, day == null ? null : (long)(day.Value * r.Qty), complete, mats));
+                    cost, sell, sellMkt, profit, margin, outP?.Qty ?? 0, outP?.Listings ?? 0, day == null ? null : (long)(day.Value * r.Qty), complete, mats,
+                    outP == null ? null : PeakQty(house, r.Item)));
             }
         return rows;
     }
