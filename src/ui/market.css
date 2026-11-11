@@ -96,6 +96,17 @@
 .ah-table tbody tr { cursor: pointer; }
 .ah-table tbody tr:hover { background: rgba(47,88,196,.18); }
 .ah-table tbody tr.sel { background: rgba(217,180,90,.14); box-shadow: inset 3px 0 0 var(--gold); }
+/* Top 3: most gold (bright green) and best margin (teal green). Lucro wins the row colour when both. */
+.ah-table tbody tr.top-margem { background: rgba(38,190,160,.13); box-shadow: inset 3px 0 0 #2fc4a4; }
+.ah-table tbody tr.top-lucro { background: rgba(70,200,80,.16); box-shadow: inset 3px 0 0 #4cd25a; }
+.ah-table tbody tr.top-lucro.r1 { background: rgba(70,200,80,.26); }
+.ah-table tbody tr.top-margem.r1:not(.top-lucro) { background: rgba(38,190,160,.22); }
+.ah-table tbody tr.top-lucro:hover, .ah-table tbody tr.top-margem:hover { filter: brightness(1.15); }
+.ah-table tbody tr.sel.top-lucro, .ah-table tbody tr.sel.top-margem { box-shadow: inset 3px 0 0 var(--gold); }
+.top-tag { display: inline-block; margin-right: 6px; padding: 1px 6px; border-radius: 8px; font-size: 11px; font-weight: 700; vertical-align: 1px; }
+.top-tag.lucro { background: #2e9e3c; color: #eaffea; }
+.top-tag.margem { background: #1f8f7a; color: #e6fffa; }
+.ah-legend { display: flex; gap: 14px; align-items: center; font-size: 12px; color: var(--muted); }
 .ah-table td.item { color: var(--text); font-weight: 600; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
 .ah-table td.prof { color: var(--muted); font-size: 13px; }
 .thin { color: var(--warn); font-size: 11px; margin-left: 6px; }

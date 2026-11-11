@@ -187,15 +187,22 @@
     const body = $("ah-rows");
     body.innerHTML = "";
     const frag = document.createDocumentFragment();
+    // Top 3 among what the filters show: most gold per craft, and best margin (needs a real cost).
+    const top3 = (key) => new Map(list.filter((r) => r[key] != null && r[key] > 0)
+      .sort((a, b) => b[key] - a[key]).slice(0, 3).map((r, i) => [r.receita, i + 1]));
+    const topL = top3("lucro"), topM = noCost() ? new Map() : top3("margem");
     list.slice(0, 400).forEach((r) => {
       const tr = document.createElement("tr");
-      if (r.receita === selected) tr.className = "sel";
+      const l = topL.get(r.receita), mg = topM.get(r.receita);
+      tr.className = [r.receita === selected && "sel", l && "top-lucro", mg && "top-margem", (l === 1 || (!l && mg === 1)) && "r1"].filter(Boolean).join(" ");
+      const tags = (l ? `<span class="top-tag lucro" title="${l}º que mais dá ouro">${l}º lucro</span>` : "") +
+        (mg ? `<span class="top-tag margem" title="${mg}º melhor margem (lucro ÷ custo)">${mg}º margem</span>` : "");
       const t = trend(r);
       const tCls = t == null ? "flat" : t > 0.02 ? "up" : t < -0.02 ? "down" : "flat";
       const tTxt = t == null ? "—" : (t > 0 ? "▲ " : t < 0 ? "▼ " : "") + Math.abs(Math.round(t * 100)) + "%";
       const qtd = r.qtdFeita > 1 ? ` <span class="flat">x${r.qtdFeita}</span>` : "";
       tr.innerHTML =
-        `<td class="item" title="${esc(tName(r))}">${esc(tName(r))}${qtd}</td>` +
+        `<td class="item" title="${esc(tName(r))}">${tags}${esc(tName(r))}${qtd}</td>` +
         `<td class="prof">${esc(tProf(r.profissao))}</td>` +
         `<td class="num">${noCost() ? '<span class="flat">ignorado</span>' : r.completo ? money(r.custo) : '<span class="neg">falta material</span>'}</td>` +
         `<td class="num">${money(r.venda)}</td>` +
