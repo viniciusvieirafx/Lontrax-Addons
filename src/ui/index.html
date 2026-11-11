@@ -132,16 +132,27 @@
         <button class="btn ghost sm" id="ah-refresh" type="button"><span class="i-refresh"></span> Atualizar preços</button>
       </div>
 
+      <div class="ah-bar char">
+        <label class="ah-field">
+          <span class="path-label">Personagem</span>
+          <input id="ah-char" class="ah-char" list="ah-char-list" placeholder="Nome Sobrenome (opcional)" spellcheck="false" autocomplete="off">
+        </label>
+        <datalist id="ah-char-list"></datalist>
+        <button class="btn ghost sm" id="ah-char-go" type="button">Carregar</button>
+        <span class="ah-charinfo" id="ah-charinfo"></span>
+      </div>
+
       <div class="chips" id="ah-profs"></div>
 
       <div class="ah-bar filters">
-        <input class="ah-search" id="ah-search" placeholder="Procurar item ou material…" spellcheck="false">
-        <label class="opt"><input type="checkbox" id="ah-only-complete" checked> Só receitas com todos os materiais à venda</label>
+        <input class="ah-search" id="ah-search" placeholder="Procurar item ou material…" title="Procurar" spellcheck="false">
+        <label class="opt" id="ah-only-known-wrap" title="Escolha o personagem acima para usar"><input type="checkbox" id="ah-only-known"> Só o que sei fazer</label>
+        <label class="opt"><input type="checkbox" id="ah-only-complete" checked> Só com todos os materiais</label>
         <label class="opt"><input type="checkbox" id="ah-only-profit" checked> Só com lucro</label>
-        <label class="opt">À venda no mínimo
+        <label class="opt">Mín. à venda
           <select id="ah-min-qty"><option value="0">qualquer</option><option value="2">2</option><option value="5" selected>5</option><option value="10">10</option><option value="25">25</option></select>
         </label>
-        <label class="opt">Avisar se lucro ≥ <input type="number" id="ah-alert" min="0" step="1" class="ah-num"> g</label>
+        <label class="opt" title="Aviso no Windows quando um craft der esse lucro">Avisar se lucro ≥ <input type="number" id="ah-alert" min="0" step="1" class="ah-num"> g</label>
       </div>
 
       <div class="ah-body">

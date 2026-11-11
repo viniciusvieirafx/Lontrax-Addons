@@ -17,7 +17,7 @@
 .pane-title { margin: 0 0 10px; font: 700 22px var(--serif); color: var(--gold-hi); }
 .ah-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end; margin-top: 16px; }
 .ah-form label { display: flex; flex-direction: column; gap: 5px; font: 600 11px var(--serif); letter-spacing: .16em; text-transform: uppercase; color: var(--parch-lo); }
-.ah-form input, .ah-search, .ah-field select, .ah-num, .opt select {
+.ah-form input, .ah-search, .ah-char, .ah-field select, .ah-num, .opt select {
   background: rgba(5,10,24,.85); color: var(--text); border: 1px solid rgba(217,180,90,.35); border-radius: 8px;
   padding: 9px 11px; font: 14px var(--sans); user-select: text;
 }
@@ -30,8 +30,12 @@
 .ah-loading .waiting { font-size: 16px; color: var(--text); }
 .ah-loading-bar { width: 320px; }
 .ah-main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.ah-bar { display: flex; align-items: center; gap: 14px; padding: 12px 28px 4px; flex-wrap: wrap; }
-.ah-bar.filters { padding-top: 6px; padding-bottom: 10px; gap: 18px; }
+.ah-bar { display: flex; align-items: center; gap: 12px; padding: 10px 28px 2px; flex-wrap: wrap; }
+.ah-bar.filters { padding-top: 6px; padding-bottom: 8px; gap: 14px; }
+.ah-bar .ah-status { flex: 1 1 200px; text-align: right; }
+.ah-search { width: 220px !important; padding: 6px 10px !important; }
+.ah-char { padding: 6px 10px !important; }
+.chip { padding: 4px 11px !important; font-size: 12.5px !important; }
 .ah-field { display: flex; align-items: center; gap: 10px; }
 .ah-field select { min-width: 260px; }
 .ah-status { color: var(--muted); font-size: 13px; margin-left: auto; }
@@ -39,6 +43,14 @@
 .ah-progress { width: 160px; }
 .ah-search { width: 260px; }
 
+.ah-bar.char { padding-top: 6px; padding-bottom: 0; }
+.ah-char { width: 230px; }
+.ah-charinfo { color: var(--muted); font-size: 13px; }
+.ah-charinfo b { color: var(--gold-hi); font-weight: 700; }
+.ah-charinfo .lvl { color: var(--text); margin-right: 10px; white-space: nowrap; }
+.opt.disabled { opacity: .45; pointer-events: none; }
+.chip .lv { margin-left: 5px; font-size: 11px; font-weight: 700; color: var(--ok); }
+.chip.on .lv { color: #1d4d24; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 28px 0; }
 .chip {
   cursor: pointer; font: 600 13px var(--sans); color: var(--muted);

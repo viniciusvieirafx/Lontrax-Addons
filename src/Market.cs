@@ -462,6 +462,95 @@ sealed class Market
         catch (GitHubException ex) { throw new MarketException("Preços da galera: " + ex.Message); }
     }
 
+    // ---------- character: profession level + known recipes ----------
+    public sealed class CharProf
+    {
+        public int nivel { get; set; }
+        public int max { get; set; }
+        public List<int> receitas { get; set; } = new();
+    }
+    public sealed class CharInfo
+    {
+        public string slug { get; set; } = "";
+        public string nome { get; set; } = "";
+        public Dictionary<string, CharProf> profissoes { get; set; } = new();
+        public DateTime lido { get; set; }
+    }
+    sealed class CharFile
+    {
+        public string? guilda { get; set; }
+        public Dictionary<string, CharInfo> personagens { get; set; } = new();
+    }
+
+    CharFile? guildChars;
+    string? guildCharsSha;
+
+    /// <summary>"Miranajanela Lontrax" → "miranajanela-lontrax" (how the Forever API names characters).</summary>
+    public static string Slug(string name) =>
+        string.Join("-", name.Trim().ToLowerInvariant().Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries));
+
+    /// <summary>The guild's characters published hourly by GitHub (tools/precos.py), for the character picker.</summary>
+    public async Task<List<(string slug, string nome)>> GuildCharacters()
+    {
+        await LoadGuildFile();
+        return guildChars?.personagens.Select(kv => (kv.Key, kv.Value.nome)).OrderBy(x => x.nome, StringComparer.CurrentCultureIgnoreCase).ToList()
+               ?? new List<(string, string)>();
+    }
+
+    async Task LoadGuildFile()
+    {
+        if (Shared == null || string.IsNullOrEmpty(Shared.Token)) return;
+        try
+        {
+            var c = await Shared.GetLatestCommit(Config.CatalogRepo, SharedRef);
+            if (c.Sha == guildCharsSha && guildChars != null) return;
+            var raw = await Shared.GetRawFile(Config.CatalogRepo, "personagens.json", SharedRef);
+            guildChars = JsonSerializer.Deserialize<CharFile>(raw);
+            guildCharsSha = c.Sha;
+        }
+        catch (GitHubException) { }
+    }
+
+    /// <summary>Reads one character's professions: straight from Blizzard with an own key (fresh after logout),
+    /// otherwise from the guild file. Null when not found.</summary>
+    public async Task<CharInfo?> LoadCharacter(string slug)
+    {
+        CharInfo? info = null;
+        if (Api.HasKeys)
+        {
+            using var d = await Api.GetJson($"/profile/wow/character/{Uri.EscapeDataString(slug)}/professions", "profile-forever-us");
+            if (d != null)
+            {
+                var e = d.RootElement;
+                info = new CharInfo { slug = slug };
+                if (e.TryGetProperty("character", out var ch))
+                    info.nome = $"{(ch.TryGetProperty("name", out var n) ? n.GetString() : "")} {(ch.TryGetProperty("surname", out var s) ? s.GetString() : "")}".Trim();
+                foreach (var group in new[] { "primaries", "secondaries" })
+                    if (e.TryGetProperty(group, out var arr))
+                        foreach (var pr in arr.EnumerateArray())
+                        {
+                            var pid = pr.GetProperty("profession").GetProperty("id").GetInt32().ToString();
+                            if (!info.profissoes.TryGetValue(pid, out var cp)) info.profissoes[pid] = cp = new CharProf();
+                            if (!pr.TryGetProperty("tiers", out var tiers)) continue;
+                            foreach (var t in tiers.EnumerateArray())
+                            {
+                                cp.nivel = Math.Max(cp.nivel, t.TryGetProperty("skill_points", out var sp) ? sp.GetInt32() : 0);
+                                cp.max = Math.Max(cp.max, t.TryGetProperty("max_skill_points", out var mp) ? mp.GetInt32() : 0);
+                                if (t.TryGetProperty("known_recipes", out var kr))
+                                    cp.receitas.AddRange(kr.EnumerateArray().Select(r => r.GetProperty("id").GetInt32()));
+                            }
+                        }
+            }
+        }
+        if (info == null)
+        {
+            await LoadGuildFile();
+            if (guildChars != null && guildChars.personagens.TryGetValue(slug, out var g)) { info = g; info.slug = slug; }
+        }
+        if (info != null) info.lido = DateTime.UtcNow;
+        return info;
+    }
+
     // ---------- history (14 days, only items used by recipes) ----------
     History GetHistory(int house)
     {

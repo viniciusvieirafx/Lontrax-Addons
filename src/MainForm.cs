@@ -341,6 +341,35 @@ sealed class MainForm : Form
                     settings.Save();
                     break;
                 case "ahRefresh": await MarketTick(manual: true); break;
+                case "ahChars":
+                    var list = await market.GuildCharacters();
+                    Post(new { type = "ahChars", lista = list.Select(x => new { slug = x.slug, nome = x.nome }) });
+                    break;
+                case "ahSetChar":
+                    {
+                        var text = ((string?)m!["nome"] ?? "").Trim();
+                        if (text.Length == 0) { settings.AhCharacter = null; settings.AhCharacterInfo = null; settings.Save(); SendMarketState(); break; }
+                        var slug = text.Contains(' ') || !text.Contains('-') ? Market.Slug(text) : text.ToLowerInvariant();
+                        var info = await market.LoadCharacter(slug);
+                        if (info == null)
+                        {
+                            Toast("erro", $"Não achei \"{text}\". Escreva nome e sobrenome como no jogo; o personagem precisa ser nível 10+ e ter deslogado uma vez.");
+                            break;
+                        }
+                        settings.AhCharacter = slug;
+                        settings.AhCharacterInfo = info;
+                        // First time: mark this character's professions so the table already makes sense.
+                        if (settings.AhProfessions.Count == 0 && market.Book != null)
+                            settings.AhProfessions = market.Book.Professions.Where(p => info.profissoes.ContainsKey(p.Id.ToString())).Select(p => p.Id).ToList();
+                        settings.Save();
+                        Toast("ok", $"{info.nome}: profissões carregadas!");
+                        SendMarketState(); SendMarketRows();
+                        break;
+                    }
+                case "ahSetOnlyKnown":
+                    settings.AhOnlyKnown = (bool?)m!["on"] ?? false;
+                    settings.Save();
+                    break;
                 case "ahRecipes":
                     await RunMarket("receitas", () => market.LoadRecipes(MarketProgress("receitas"), force: true));
                     SendMarketState(); SendMarketRows();
@@ -637,6 +666,21 @@ sealed class MainForm : Form
             atualizado = snap?.LastModified.ToLocalTime().ToString("dd/MM HH:mm"),
             checado = snap?.Fetched.ToLocalTime().ToString("HH:mm"),
             taxa = Market.AhCut,
+            soConhecidas = settings.AhOnlyKnown,
+            personagem = settings.AhCharacterInfo is not { } ci ? null : new
+            {
+                ci.slug,
+                ci.nome,
+                lido = ci.lido.ToLocalTime().ToString("dd/MM HH:mm"),
+                profissoes = ci.profissoes.Select(kv => new
+                {
+                    id = int.Parse(kv.Key),
+                    nome = market.Book?.Professions.FirstOrDefault(p => p.Id.ToString() == kv.Key)?.Name ?? kv.Key,
+                    kv.Value.nivel,
+                    kv.Value.max,
+                }),
+                conhecidas = ci.profissoes.Values.SelectMany(p => p.receitas).Distinct(),
+            },
         });
     }
 
@@ -689,6 +733,12 @@ sealed class MainForm : Form
             fresh = await market.Refresh(h);
         });
         if (!ok) return;
+        // Character sheet changes only after logout: re-read it now and then, quietly.
+        if (settings.AhCharacter is string cs && (settings.AhCharacterInfo == null || manual || DateTime.UtcNow - settings.AhCharacterInfo.lido > TimeSpan.FromMinutes(50)))
+        {
+            try { if (await market.LoadCharacter(cs) is { } ci) { settings.AhCharacterInfo = ci; settings.Save(); } }
+            catch (Exception ex) { LogError("character", ex); }
+        }
         SendMarketState();
         if (fresh || manual) SendMarketRows();
         if (manual && !fresh) Post(new { type = "ahInfo", text = "Os preços já estão em dia. A Blizzard atualiza mais ou menos de hora em hora." });

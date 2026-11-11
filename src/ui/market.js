@@ -6,6 +6,8 @@
   const send = (cmd, extra = {}) => host && host.postMessage({ cmd, ...extra });
 
   let st = {};          // ahState from the app
+  let known = null;     // Set of recipe ids the chosen character knows
+  let charsAsked = false;
   let rows = [];        // every recipe of the chosen professions
   let sortKey = "lucro", sortDir = -1;
   let selected = null;  // recipe id shown on the right
@@ -69,13 +71,27 @@
 
     const fonte = st.chavePropria ? "sua chave" : "preços da galera";
     $("ah-status").innerHTML = (st.atualizado
-      ? `Preços da Blizzard de <b>${esc(st.atualizado)}</b> · checado às ${esc(st.checado)} · ${fonte}`
+      ? `Preços de <b>${esc(st.atualizado)}</b> · ${fonte}`
       : st.casa == null ? "Escolha a sua Casa de Leilões." : "") +
       ` · <button class="link small" id="ah-key-toggle" type="button">${st.chavePropria ? "usar preços da galera" : "usar minha chave"}</button>`;
     $("ah-key-toggle").addEventListener("click", () => {
       if (st.chavePropria) { if (confirm("Parar de usar a sua chave da Blizzard e usar os preços da galera?")) send("ahForgetKeys"); }
       else { $("ah-main").hidden = true; $("ah-setup").hidden = false; $("ah-setup-back").hidden = false; }
     });
+
+    // Character: level per profession and the recipes it knows.
+    const pj = st.personagem;
+    if (document.activeElement !== $("ah-char")) $("ah-char").value = pj ? pj.nome : "";
+    const levels = {};
+    (pj ? pj.profissoes : []).forEach((p) => (levels[p.id] = p));
+    $("ah-charinfo").innerHTML = pj
+      ? pj.profissoes.filter((p) => p.max > 0).map((p) => `<span class="lvl">${esc(p.nome)} <b>${p.nivel}</b>/${p.max}</span>`).join("") +
+        `<span class="flat" title="A Blizzard atualiza a ficha quando você desloga">· ficha de ${esc(pj.lido)}</span>`
+      : "Escolha seu personagem para ver só o que você sabe fazer.";
+    known = pj ? new Set(pj.conhecidas || []) : null;
+    $("ah-only-known").checked = !!pj && st.soConhecidas !== false;
+    $("ah-only-known").disabled = !pj;
+    $("ah-only-known-wrap").classList.toggle("disabled", !pj);
 
     const chips = $("ah-profs");
     chips.innerHTML = "";
@@ -90,7 +106,7 @@
       const b = document.createElement("button");
       b.type = "button";
       b.className = "chip" + (chosen.has(p.id) ? " on" : "");
-      b.innerHTML = `${esc(p.nome)}<span class="n">${p.receitas}</span>`;
+      b.innerHTML = `${esc(p.nome)}` + (levels[p.id] ? `<span class="lv" title="Seu nível">${levels[p.id].nivel}</span>` : `<span class="n">${p.receitas}</span>`);
       b.addEventListener("click", () => {
         const s = new Set(st.escolhidas || []);
         s.has(p.id) ? s.delete(p.id) : s.add(p.id);
@@ -118,7 +134,9 @@
     const onlyComplete = $("ah-only-complete").checked;
     const onlyProfit = $("ah-only-profit").checked;
     const minQty = +$("ah-min-qty").value;
+    const onlyKnown = known && $("ah-only-known").checked;
     const list = rows.filter((r) => {
+      if (onlyKnown && !known.has(r.receita)) return false;
       if (r.venda == null) return false; // nobody sells it: no price to compare
       if (onlyComplete && !r.completo) return false;
       if (onlyProfit && !(r.lucro > 0)) return false;
@@ -168,7 +186,9 @@
       empty.hidden = false;
       empty.textContent = st.casa == null ? "Escolha a sua Casa de Leilões lá em cima."
         : !rows.length ? "Carregando receitas e preços…"
-        : "Nenhuma receita com esses filtros. Tente desmarcar \"Só com lucro\" ou baixar o mínimo à venda.";
+        : known && $("ah-only-known").checked
+          ? "Nenhuma receita que seu personagem sabe passa nesses filtros. Tente desmarcar \"Só com lucro\", baixar o mínimo à venda, ou desmarcar \"Só o que meu personagem sabe fazer\" para ver o que vale a pena aprender."
+          : "Nenhuma receita com esses filtros. Tente desmarcar \"Só com lucro\" ou baixar o mínimo à venda.";
     } else empty.hidden = true;
     document.querySelectorAll(".ah-table th").forEach((th) => {
       th.classList.toggle("sorted", th.dataset.sort === sortKey);
@@ -277,6 +297,12 @@
     $("ah-save-keys").disabled = true;
     send("ahSaveKeys", { id, secret });
   });
+  // Character picker: the guild list fills the suggestions the first time the box is used.
+  $("ah-char").addEventListener("focus", () => { if (!charsAsked) { charsAsked = true; send("ahChars"); } });
+  const loadChar = () => send("ahSetChar", { nome: $("ah-char").value.trim() });
+  $("ah-char-go").addEventListener("click", loadChar);
+  $("ah-char").addEventListener("keydown", (e) => { if (e.key === "Enter") loadChar(); });
+  $("ah-only-known").addEventListener("change", (e) => { st.soConhecidas = e.target.checked; send("ahSetOnlyKnown", { on: e.target.checked }); renderRows(); });
   $("ah-setup-back").addEventListener("click", () => { $("ah-setup-back").hidden = true; renderState(); });
   $("ah-house").addEventListener("change", (e) => { if (e.target.value) pickHouse(+e.target.value); });
   $("ah-which").addEventListener("click", openCompare);
@@ -300,6 +326,12 @@
     switch (m.type) {
       case "ahState": st = m; $("ah-save-keys").disabled = false; renderState(); if (!rows.length) renderRows(); break;
       case "ahRows": rows = m.rows || []; renderRows(); renderDetail(); break;
+      case "ahChars": {
+        const dl = $("ah-char-list");
+        dl.innerHTML = "";
+        (m.lista || []).forEach((c) => { const o = document.createElement("option"); o.value = c.nome; dl.appendChild(o); });
+        break;
+      }
       case "ahHistory": history = { item: m.item, pontos: m.pontos || [] }; renderDetail(); break;
       case "ahCompare": if (compareOpen) renderCompare(m); break;
       case "ahProgress":
@@ -356,7 +388,8 @@
     // Developer preview: market.js?real → loads ah-rows.json made by --selftest-market.
     fetch("ah-rows.json").then((r) => (r.ok ? r.json() : null)).then((d) => {
       if (!d) return;
-      rows = d.rows; st.profissoes = d.profissoes; st.escolhidas = [];
+      rows = d.rows; st.profissoes = d.profissoes; st.escolhidas = [165];
+      if (d.personagem) st.personagem = d.personagem;
       selected = null; renderState(); renderRows(); renderDetail();
     }).catch(() => {});
   }

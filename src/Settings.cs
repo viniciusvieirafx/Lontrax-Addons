@@ -24,6 +24,11 @@ sealed class Settings
     public List<int> AhProfessions { get; set; } = new();
     /// <summary>Notify (Windows balloon) when a craft gives at least this much gold profit. 0 = off.</summary>
     public int AhAlertGold { get; set; }
+    /// <summary>Character chosen in the Mercado ("nome-sobrenome") and its last known professions.</summary>
+    public string? AhCharacter { get; set; }
+    public Market.CharInfo? AhCharacterInfo { get; set; }
+    /// <summary>Show only recipes the character already knows.</summary>
+    public bool AhOnlyKnown { get; set; } = true;
     /// <summary>Recipe ids already announced, with the hour they were announced (no repeat for 6 h).</summary>
     public Dictionary<int, long> AhAlerted { get; set; } = new();
 

@@ -78,6 +78,63 @@ def snapshot(house, com, auc, lm):
             "Prices": prices}
 
 
+def get_profile(tok, path):
+    """Same as get() but in the character namespace."""
+    url = f"{API}{path}?namespace=profile-forever-us&locale=pt_BR"
+    for attempt in range(3):
+        try:
+            req = urllib.request.Request(url, headers={"Authorization": "Bearer " + tok, "Accept-Encoding": "gzip"})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                body = r.read()
+                if r.headers.get("Content-Encoding") == "gzip":
+                    body = gzip.decompress(body)
+                return json.loads(body)
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return None
+            if e.code != 429 and e.code < 500:
+                return None
+        except Exception:
+            pass
+        time.sleep(1.5 * (attempt + 1))
+    return None
+
+
+def professions(p):
+    """{profession id: {"nivel", "max", "receitas": [recipe ids]}} from a /professions answer."""
+    out = {}
+    for group in ("primaries", "secondaries"):
+        for pr in (p or {}).get(group, []):
+            pid = pr["profession"]["id"]
+            for t in pr.get("tiers", []):
+                cur = out.setdefault(str(pid), {"nivel": 0, "max": 0, "receitas": []})
+                cur["nivel"] = max(cur["nivel"], t.get("skill_points", 0))
+                cur["max"] = max(cur["max"], t.get("max_skill_points", 0))
+                cur["receitas"] += [r["id"] for r in t.get("known_recipes", [])]
+    return out
+
+
+def guild_characters(tok, guild):
+    """Professions (level + known recipes) of every guild member from level 10 up."""
+    from concurrent.futures import ThreadPoolExecutor
+    roster = get_profile(tok, f"/data/wow/guild/{guild}/roster")
+    if not roster:
+        print(f"guilda {guild}: lista não encontrada", flush=True)
+        return {}
+    members = [m["character"] for m in roster.get("members", []) if m["character"].get("level", 0) >= 10]
+
+    def one(c):
+        return c, professions(get_profile(tok, f"/profile/wow/character/{c['slug']}/professions"))
+
+    chars = {}
+    with ThreadPoolExecutor(12) as ex:
+        for c, profs in ex.map(one, members):
+            if profs:
+                chars[c["slug"]] = {"nome": f"{c['name']} {c.get('surname', '')}".strip(), "nivel": c.get("level", 0), "profissoes": profs}
+    print(f"guilda {guild}: {len(members)} membros nível 10+, {len(chars)} com profissão", flush=True)
+    return chars
+
+
 def main(out):
     os.makedirs(out, exist_ok=True)
     tok = token()
@@ -93,6 +150,13 @@ def main(out):
             json.dump(snap, f, separators=(",", ":"))
         resumo.append({"casa": h, "itens": len(snap["Prices"]), "atualizado": snap["LastModified"]})
         print(f"casa {h}: {len(snap['Prices'])} itens, Blizzard {snap['LastModified']}", flush=True)
+    # Character sheets of the guild (profession level + known recipes), so friends without a key can
+    # filter the Mercado by what their character can craft.
+    guild = os.environ.get("GUILDA", "made-in-brazil")
+    chars = guild_characters(tok, guild)
+    with open(os.path.join(out, "personagens.json"), "w", encoding="utf-8") as f:
+        json.dump({"gerado": datetime.datetime.now(datetime.timezone.utc).isoformat(), "guilda": guild, "personagens": chars},
+                  f, ensure_ascii=False, separators=(",", ":"))
     with open(os.path.join(out, "resumo.json"), "w", encoding="utf-8") as f:
         json.dump({"gerado": datetime.datetime.now(datetime.timezone.utc).isoformat(), "casas": resumo}, f, indent=1)
 

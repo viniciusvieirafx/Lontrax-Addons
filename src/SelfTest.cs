@@ -66,11 +66,31 @@ static class SelfTest
             W($"rows: {rows.Count}, complete {rows.Count(r => r.completo)}, priced {rows.Count(r => r.lucro != null)}, profitable {rows.Count(r => r.lucro > 0)}");
             foreach (var r in rows.Where(r => r.lucro > 0 && r.aVenda >= 5).OrderByDescending(r => r.lucro).Take(15))
                 W($"  +{r.lucro / 10000.0:0.00}g  {r.profissao,-18} {r.nome}  (custo {r.custo / 10000.0:0.00}g, vende {r.venda / 10000.0:0.00}g, {r.aVenda} a venda)");
+            // Character sheet (profession level + known recipes).
+            var slug = Environment.GetEnvironmentVariable("LONTRAX_CHAR") ?? "miranajanela-lontrax";
+            var ch = await m.LoadCharacter(slug);
+            if (ch == null) W($"character {slug}: NOT FOUND");
+            else
+            {
+                W($"character {ch.nome}: " + string.Join(", ", ch.profissoes.Select(p => $"{p.Key} {p.Value.nivel}/{p.Value.max} ({p.Value.receitas.Count} receitas)")));
+                var knownSet = ch.profissoes.Values.SelectMany(p => p.receitas).ToHashSet();
+                var mine = rows.Where(r => knownSet.Contains(r.receita)).ToList();
+                W($"  known recipes in the table: {mine.Count}, with profit: {mine.Count(r => r.lucro > 0)}");
+                foreach (var r in mine.Where(r => r.lucro > 0).OrderByDescending(r => r.lucro).Take(5))
+                    W($"  +{r.lucro / 10000.0:0.00}g  {r.nome} ({r.aVenda} a venda)");
+            }
+            if (ch == null && !m.UsingShared) return 1;
             // Same JSON the window receives, for checking the screen in a browser preview.
             File.WriteAllText(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(logPath))!, "ah-rows.json"), JsonSerializer.Serialize(new
             {
                 rows,
                 profissoes = m.Book.Professions.Select(p => new { id = p.Id, nome = p.Name, receitas = p.Recipes.Count }),
+                personagem = ch == null ? null : new
+                {
+                    ch.slug, ch.nome, lido = ch.lido.ToLocalTime().ToString("dd/MM HH:mm"),
+                    profissoes = ch.profissoes.Select(kv => new { id = int.Parse(kv.Key), nome = m.Book.Professions.FirstOrDefault(p => p.Id.ToString() == kv.Key)?.Name ?? kv.Key, kv.Value.nivel, kv.Value.max }),
+                    conhecidas = ch.profissoes.Values.SelectMany(p => p.receitas).Distinct(),
+                },
             }));
             W("MARKET OK");
             return 0;
