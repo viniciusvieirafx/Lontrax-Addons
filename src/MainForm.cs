@@ -78,10 +78,10 @@ sealed class MainForm : Form
 
         if (startHidden)
         {
-            // Started with Windows: load quietly, stay in the tray.
+            // Started with Windows: load quietly, stay in the tray. Never touch ShowInTaskbar here:
+            // changing it recreates the window and the page (WebView2) stays blank on the old one.
             Opacity = 0;
-            ShowInTaskbar = false;
-            Shown += (_, _) => { Hide(); Opacity = 1; ShowInTaskbar = true; };
+            Shown += (_, _) => { Hide(); Opacity = 1; };
         }
         ApplyAutostart();
     }
