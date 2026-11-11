@@ -91,6 +91,12 @@
 
   <!-- ===================== Mercado ===================== -->
   <div class="tab-pane" id="tab-mercado" hidden>
+    <!-- first load: shown until the app answers (downloading recipes takes ~1 min the first time) -->
+    <div class="ah-loading" id="ah-loading">
+      <p class="waiting"><span class="spinner"></span> <span id="ah-loading-text">Abrindo o Mercado…</span></p>
+      <div class="progress ah-loading-bar" id="ah-loading-progress" hidden><div class="bar"></div></div>
+    </div>
+
     <!-- no Battle.net key yet -->
     <div class="ah-setup" id="ah-setup" hidden>
       <div class="plaque left">

@@ -227,13 +227,34 @@ sealed class Market
         s.Save();
     }
 
-    // ---------- recipes (refreshed once a week) ----------
+    // ---------- recipes ----------
+    /// <summary>A copy of the recipes ships inside the app (src\data), so the Mercado opens at once even on a
+    /// friend's first run. The app refreshes it from Blizzard in the background once a week.</summary>
+    static T? Embedded<T>(string name)
+    {
+        try
+        {
+            using var s = typeof(Market).Assembly.GetManifestResourceStream("data." + name);
+            return s == null ? default : JsonSerializer.Deserialize<T>(s);
+        }
+        catch { return default; }
+    }
+
+    public bool RecipesStale => Book == null || DateTime.UtcNow - Book.Fetched > TimeSpan.FromDays(7);
+
+    /// <summary>Loads recipes from disk or the built-in copy (instant). Downloads from Blizzard only when there is
+    /// nothing at all, or when <paramref name="force"/> is set (weekly background refresh).</summary>
     public async Task LoadRecipes(IProgress<double>? progress, bool force = false)
     {
         var file = Path.Combine(Dir, "receitas.json");
         if (Book == null && File.Exists(file))
             try { Book = JsonSerializer.Deserialize<RecipeBook>(File.ReadAllText(file)); } catch { }
-        if (!force && Book != null && Book.Professions.Count > 0 && DateTime.UtcNow - Book.Fetched < TimeSpan.FromDays(7)) return;
+        if (Book == null || Book.Professions.Count == 0)
+        {
+            var built = Embedded<RecipeBook>("receitas.json");
+            if (built != null && built.Professions.Count > 0) Book = built;
+        }
+        if (!force && Book != null && Book.Professions.Count > 0) return;
 
         var book = new RecipeBook { Fetched = DateTime.UtcNow };
         using var idx = await Api.GetJson("/data/wow/profession/index", BlizzardClient.StaticNs)
@@ -263,7 +284,7 @@ sealed class Market
 
         var done = 0;
         var results = new System.Collections.Concurrent.ConcurrentBag<(Profession prof, Recipe r)>();
-        await Parallel.ForEachAsync(todo, new ParallelOptions { MaxDegreeOfParallelism = 12 }, async (x, _) =>
+        await Parallel.ForEachAsync(todo, new ParallelOptions { MaxDegreeOfParallelism = 20 }, async (x, _) =>
         {
             using var rd = await Api.GetJson($"/data/wow/recipe/{x.recipe}", BlizzardClient.StaticNs);
             var p = Interlocked.Increment(ref done);
@@ -316,6 +337,7 @@ sealed class Market
         var file = Path.Combine(Dir, "casas.json");
         if (Houses.Count == 0 && File.Exists(file))
             try { Houses = JsonSerializer.Deserialize<List<HouseInfo>>(File.ReadAllText(file)) ?? new(); } catch { }
+        if (Houses.Count == 0) Houses = Embedded<List<HouseInfo>>("casas.json") ?? new();
         if (Houses.Count > 0) return;
         using var d = await Api.GetJson($"/data/wow/ruleset/{Ruleset}/auctions/", BlizzardClient.DynamicNs)
                       ?? throw new MarketException("A Blizzard não mandou a lista de casas de leilão.");
@@ -345,10 +367,14 @@ sealed class Market
         var old = GetSnapshot(house);
         var since = old?.LastModified;
         var basePath = $"/data/wow/ruleset/{Ruleset}/auctions/{house}";
-        var com = await Api.Get(basePath + "/commodities", BlizzardClient.DynamicNs, since);
+        // Both lists at the same time (≈17 MB together); with If-Modified-Since both answer "no change" in a blink.
+        var comTask = Api.Get(basePath + "/commodities", BlizzardClient.DynamicNs, since);
+        var aucTask = Api.Get(basePath, BlizzardClient.DynamicNs, since);
+        var com = await comTask;
+        var auc = await aucTask;
         if (com.Status == HttpStatusCode.NotModified) { if (old != null) old.Fetched = DateTime.UtcNow; return false; }
         if (com.Body == null) throw new MarketException($"A Blizzard não mandou os preços (erro {(int)com.Status}).");
-        var auc = await Api.Get(basePath, BlizzardClient.DynamicNs);
+        if (auc.Status == HttpStatusCode.NotModified) auc = await Api.Get(basePath, BlizzardClient.DynamicNs);
 
         var units = new Dictionary<int, List<(long unit, int qty)>>();
         void Add(int id, long unit, int qty)

@@ -48,6 +48,7 @@
 
   // ---------- state ----------
   function renderState() {
+    $("ah-loading").hidden = true;
     $("ah-setup").hidden = !!st.hasKeys;
     $("ah-main").hidden = !st.hasKeys;
     if (!st.hasKeys) return;
@@ -294,6 +295,12 @@
       case "ahHistory": history = { item: m.item, pontos: m.pontos || [] }; renderDetail(); break;
       case "ahCompare": if (compareOpen) renderCompare(m); break;
       case "ahProgress":
+        // Before the first state arrives the main area is hidden: show the progress in the middle.
+        if (!$("ah-loading").hidden) {
+          $("ah-loading-text").textContent = PROG_TEXT[m.what] || "Trabalhando…";
+          $("ah-loading-progress").hidden = false;
+          $("ah-loading-progress").querySelector(".bar").style.width = Math.max(4, Math.round(m.value * 100)) + "%";
+        }
         $("ah-progress").hidden = false;
         $("ah-progress").querySelector(".bar").style.width = Math.max(4, Math.round(m.value * 100)) + "%";
         $("ah-refresh").disabled = true;
@@ -301,6 +308,7 @@
         break;
       case "ahProgressEnd": $("ah-progress").hidden = true; $("ah-refresh").disabled = false; renderState(); break;
       case "ahError":
+        if (!$("ah-loading").hidden) $("ah-loading-text").textContent = "Não deu para abrir o Mercado: " + m.text;
         $("ah-save-keys").disabled = false;
         toast("erro", m.text);
         if (compareOpen) $("ah-compare-body").innerHTML = `<p class="note">${esc(m.text)}</p>`;

@@ -48,6 +48,7 @@ static class SelfTest
                 if (l.StartsWith("CLIENT_ID=")) m.Api.ClientId = l[10..].Trim();
                 if (l.StartsWith("CLIENT_SECRET=")) m.Api.ClientSecret = l[14..].Trim();
             }
+            if (!m.Api.HasKeys) m.LoadKeys(Settings.Load()); // keys saved (encrypted) in config.json
             var t = System.Diagnostics.Stopwatch.StartNew();
             await m.LoadHouses();
             W($"houses: {m.Houses.Count} ({string.Join(", ", m.Houses.Select(h => h.Faction + " " + h.Id))})");

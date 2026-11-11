@@ -281,6 +281,8 @@ sealed class MainForm : Form
             {
                 case "ready":
                     SendState();
+                    // Mercado gets ready in the background, so the tab is already filled when clicked.
+                    if (market.Api.HasKeys) _ = MarketInit();
                     if (gh.Token != null)
                     {
                         if (startHidden) await BackgroundCheck(false); // started with Windows: just notify
@@ -649,6 +651,24 @@ sealed class MainForm : Form
         SendMarketRows();
         if (settings.AhHouse is int h && (market.GetSnapshot(h) is not { } s || DateTime.UtcNow - s.Fetched > TimeSpan.FromMinutes(20)))
             await MarketTick(manual: false);
+        if (market.RecipesStale) await RefreshRecipesQuietly();
+    }
+
+    bool recipesRefreshing;
+
+    /// <summary>Weekly: downloads the recipes again in the background while the old list stays on screen.</summary>
+    async Task RefreshRecipesQuietly()
+    {
+        if (recipesRefreshing || !market.Api.HasKeys) return;
+        recipesRefreshing = true;
+        try
+        {
+            await market.LoadRecipes(null, force: true);
+            SendMarketState();
+            SendMarketRows();
+        }
+        catch (Exception ex) { LogError("recipes", ex); }
+        finally { recipesRefreshing = false; }
     }
 
     /// <summary>Every 15 minutes: asks Blizzard whether the house has a newer dump (cheap when nothing changed).</summary>
