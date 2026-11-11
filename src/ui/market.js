@@ -23,7 +23,16 @@
     const p = (st.profissoes || []).find((x) => x.nome === pt);
     return (p && EN.profissoes[p.id]) || pt;
   };
-  let rows = [];        // every recipe of the chosen professions
+  let rawRows = [];     // rows exactly as the app computed them
+  let rows = [];        // every recipe of the chosen professions (after the "ignore material cost" toggle)
+  // "Ignorar custo do material": materials count as free (already farmed), so profit = sale − AH cut.
+  const noCost = () => $("ah-no-cost").checked;
+  function deriveRows() {
+    if (!noCost()) { rows = rawRows; return; }
+    const cut = 1 - (st.taxa || 0.05);
+    rows = rawRows.map((r) => ({ ...r, custo: 0, completo: true, margem: null, lucro: r.venda == null ? null : Math.round(r.venda * cut) }));
+  }
+  const setRows = (list) => { rawRows = list || []; deriveRows(); };
   let sortKey = "lucro", sortDir = -1;
   let selected = null;  // recipe id shown on the right
   let started = false;
@@ -188,7 +197,7 @@
       tr.innerHTML =
         `<td class="item" title="${esc(tName(r))}">${esc(tName(r))}${qtd}</td>` +
         `<td class="prof">${esc(tProf(r.profissao))}</td>` +
-        `<td class="num">${r.completo ? money(r.custo) : '<span class="neg">falta material</span>'}</td>` +
+        `<td class="num">${noCost() ? '<span class="flat">ignorado</span>' : r.completo ? money(r.custo) : '<span class="neg">falta material</span>'}</td>` +
         `<td class="num">${money(r.venda)}</td>` +
         `<td class="num ${r.lucro > 0 ? "pos" : "neg"}">${money(r.lucro)}</td>` +
         `<td class="num">${pct(r.margem)}</td>` +
@@ -250,12 +259,12 @@
       h += `<li><b class="q">${m.qtd * n}×</b> ${esc(tMat(m))} ${where}${each}${short}<span class="tot">${m.preco == null ? "—" : money(m.preco * m.qtd * n)}</span></li>`;
     });
     h += `</ul>
-      <div class="need-f"><span>Total dos materiais</span><b>${r.completo ? money(r.custo * n) : "incompleto"}</b></div>
+      <div class="need-f"><span>Total dos materiais</span><b>${noCost() ? '<span class="flat">ignorado</span>' : r.completo ? money(r.custo * n) : "incompleto"}</b></div>
       ${r.lucro != null ? `<div class="need-f"><span>Lucro vendendo ${n * r.qtdFeita}</span><b class="${r.lucro > 0 ? "pos" : "neg"}">${money(r.lucro * n)}</b></div>` : ""}
       ${sabe ? `<div class="need-a">${sabe}</div>` : ""}
     </div>`;
     h += `<h5>Conta</h5><div class="kv">
-      <span class="k">Custo dos materiais</span><span>${r.completo ? money(r.custo) : "incompleto"}</span>
+      <span class="k">Custo dos materiais</span><span>${noCost() ? '<span class="flat">ignorado (já tenho)</span>' : r.completo ? money(r.custo) : "incompleto"}</span>
       <span class="k">Vende por (mais barato na AH)</span><span>${money(r.venda)}</span>
       <span class="k">Preço de mercado</span><span>${money(r.vendaMercado)}</span>
       <span class="k">Taxa da AH (5%)</span><span>${money(fee == null ? null : -fee)}</span>
@@ -322,7 +331,7 @@
 
   function pickHouse(id) {
     st.casa = id;
-    rows = [];
+    setRows([]);
     selected = null;
     renderState(); renderRows(); renderDetail();
     send("ahSetHouse", { id });
@@ -364,18 +373,25 @@
       renderRows();
     }));
   $("ah-alert").addEventListener("change", (e) => send("ahSetAlert", { gold: Math.max(0, parseInt(e.target.value || "0", 10) || 0) }));
-  ["ah-only-complete", "ah-only-profit", "ah-min-qty"].forEach((id) => {
+  // Ignore material cost: changes profit itself, so rebuild rows before drawing.
+  $("ah-no-cost").addEventListener("change", (e) => {
+    LS("lontrax.ah-no-cost", e.target.checked);
+    $("ah-only-complete").disabled = e.target.checked; // every recipe counts as complete
+    deriveRows(); renderRows(); renderDetail();
+  });
+  ["ah-only-complete", "ah-only-profit", "ah-min-qty", "ah-no-cost"].forEach((id) => {
     const v = LS("lontrax." + id);
     if (v == null) return;
     if ($(id).type === "checkbox") $(id).checked = v === "true"; else $(id).value = v;
   });
+  $("ah-only-complete").disabled = noCost();
 
   const PROG_TEXT = { receitas: "Baixando receitas (só na primeira vez)…", precos: "Baixando preços…", comparar: "Comparando casas…" };
   host && host.addEventListener("message", (ev) => {
     const m = ev.data;
     switch (m.type) {
       case "ahState": st = m; $("ah-save-keys").disabled = false; renderState(); if (!rows.length) renderRows(); break;
-      case "ahRows": rows = m.rows || []; renderRows(); renderDetail(); break;
+      case "ahRows": setRows(m.rows); renderRows(); renderDetail(); break;
       case "ahNames":
         try { EN = JSON.parse(m.json); } catch (e) { EN = null; }
         if (st.hasKeys !== undefined) { renderState(); renderRows(); renderDetail(); }
@@ -427,13 +443,13 @@
       lucro: Math.round(venda * 0.95) - custo, margem: (Math.round(venda * 0.95) - custo) / custo, aVenda, anuncios: aVenda, ontem, completo: true,
       materiais: mats || [{ id: 1, nome: "Couro Médio", qtd: 6, preco: 12000, fonte: "ah", aVenda: 300 }, { id: 2, nome: "Linha Fina", qtd: 2, preco: 100, fonte: "npc", aVenda: 0 }],
     });
-    rows = [
+    setRows([
       mk(1, "Braçadeiras de Camurça Azul", 15165, 105200, 5, 98000),
       mk(2, "Luvas de Camurça Azul", 13343, 80600, 5, 90000),
       mk(3, "Colete de Couro Silvestre", 10403, 200000, 1, null),
       mk(4, "Braçadeiras Barbarescas", 7025, 29600, 60, 29000),
       mk(5, "Perneiras Escorpídeas Resistentes", 19470, 44000, 6, 40000),
-    ];
+    ]);
     showTab("mercado");
     renderState(); renderRows();
     selected = 1; renderDetail();
@@ -442,7 +458,7 @@
     // Developer preview: market.js?real → loads ah-rows.json made by --selftest-market.
     fetch("ah-rows.json").then((r) => (r.ok ? r.json() : null)).then((d) => {
       if (!d) return;
-      rows = d.rows; st.profissoes = d.profissoes; st.escolhidas = [165];
+      setRows(d.rows); st.profissoes = d.profissoes; st.escolhidas = [165];
       if (d.personagem) st.personagem = d.personagem;
       fetch("nomes-en.json").then((r) => (r.ok ? r.json() : null)).then((n) => { if (n) { EN = n; renderState(); renderRows(); renderDetail(); } }).catch(() => {});
       selected = null; renderState(); renderRows(); renderDetail();
