@@ -1,0 +1,41 @@
+# De hora em hora: baixa os preços da Casa de Leilões do WoW Forever com a chave da Blizzard guardada
+# como segredo (BLIZZARD_CLIENT_ID / BLIZZARD_CLIENT_SECRET) e publica no ramo "precos".
+# O app Lontrax Addons lê de lá, então a galera não precisa de chave própria.
+name: Precos da AH
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: precos
+  cancel-in-progress: false
+
+jobs:
+  precos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Baixa os preços
+        env:
+          BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+          BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+        run: python3 tools/precos.py "$RUNNER_TEMP/precos"
+
+      - name: Publica no ramo precos (um commit só, sem acumular histórico)
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          cd "$RUNNER_TEMP/precos"
+          git init -q -b precos
+          git config user.name "lontrax-precos"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Preços $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" precos
