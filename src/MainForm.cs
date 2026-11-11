@@ -41,7 +41,9 @@ sealed class MainForm : Form
                 catch { return; }
             }
         }) { IsBackground = true };
-        HandleCreated += (_, _) => listener.Start();
+        // HandleCreated fires again when Windows recreates the window (e.g. ShowInTaskbar changes when
+        // starting in the tray): start the listener only once.
+        HandleCreated += (_, _) => { if (listener.ThreadState.HasFlag(System.Threading.ThreadState.Unstarted)) listener.Start(); };
         Text = "Lontrax — Addons da Aliança";
         BackColor = Color.FromArgb(7, 13, 31);
         MinimumSize = new Size(940, 640);
@@ -355,7 +357,18 @@ sealed class MainForm : Form
         }
     }
 
-    void Post(object payload) => web.CoreWebView2?.PostWebMessageAsJson(JsonSerializer.Serialize(payload));
+    /// <summary>Sends a message to the page. Safe from any thread (the Mercado download reports progress
+    /// from worker threads; WebView2 only accepts calls on the window's thread).</summary>
+    void Post(object payload)
+    {
+        var json = JsonSerializer.Serialize(payload);
+        if (InvokeRequired)
+        {
+            try { BeginInvoke(() => web.CoreWebView2?.PostWebMessageAsJson(json)); } catch { }
+            return;
+        }
+        web.CoreWebView2?.PostWebMessageAsJson(json);
+    }
     void Toast(string kind, string text) => Post(new { type = "toast", kind, text });
 
     void SendState()
