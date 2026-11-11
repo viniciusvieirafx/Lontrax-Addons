@@ -8,6 +8,7 @@
   let st = {};          // ahState from the app
   let known = null;     // Set of recipe ids the chosen character knows
   let charsAsked = false;
+  let craftQty = 1;     // "Para fazer N×" in the detail panel
   let rows = [];        // every recipe of the chosen professions
   let sortKey = "lucro", sortDir = -1;
   let selected = null;  // recipe id shown on the right
@@ -215,12 +216,23 @@
     d.hidden = false;
     const fee = r.venda == null ? null : Math.round(r.venda * (st.taxa || 0.05));
     let h = `<button class="ah-close" id="ah-close" type="button" title="Fechar">×</button><h4>${esc(r.nome)}</h4><div class="sub">${esc(r.profissao)} · ${esc(r.categoria)}${r.qtdFeita > 1 ? ` · faz ${r.qtdFeita} por vez` : ""}</div>`;
-    h += `<h5>Materiais</h5><table class="mats">`;
+    // "To craft N× item you need": the shopping list, multiplied by how many you want to craft.
+    const n = craftQty;
+    const sabe = known ? (known.has(r.receita) ? '<span class="know yes">✓ Você já sabe essa receita</span>' : '<span class="know no">Você ainda não aprendeu essa receita</span>') : "";
+    h += `<div class="need">
+      <div class="need-h">Para fazer <input type="number" id="ah-qty" class="ah-qty" min="1" max="999" value="${n}"> × <b>${esc(r.nome)}</b> você precisa de:</div>
+      <ul class="need-list">`;
     r.materiais.forEach((m) => {
-      const tag = m.fonte === "npc" ? '<span class="src npc">NPC</span>' : m.fonte === "ah" ? '<span class="src ah">AH</span>' : '<span class="src falta">SEM OFERTA</span>';
-      h += `<tr><td>${m.qtd}x ${esc(m.nome)}${tag}</td><td>${m.preco == null ? "—" : money(m.preco * m.qtd)}</td></tr>`;
+      const where = m.fonte === "npc" ? '<span class="src npc">NPC</span>' : m.fonte === "ah" ? '<span class="src ah">AH</span>' : '<span class="src falta">SEM OFERTA</span>';
+      const each = m.preco == null ? "" : ` <span class="flat">(${money(m.preco)} cada${m.fonte === "ah" ? ` · ${m.aVenda} à venda` : ""})</span>`;
+      const short = m.fonte === "ah" && m.aVenda < m.qtd * n ? ' <span class="thin">não tem tudo na AH</span>' : "";
+      h += `<li><b class="q">${m.qtd * n}×</b> ${esc(m.nome)} ${where}${each}${short}<span class="tot">${m.preco == null ? "—" : money(m.preco * m.qtd * n)}</span></li>`;
     });
-    h += `</table>`;
+    h += `</ul>
+      <div class="need-f"><span>Total dos materiais</span><b>${r.completo ? money(r.custo * n) : "incompleto"}</b></div>
+      ${r.lucro != null ? `<div class="need-f"><span>Lucro vendendo ${n * r.qtdFeita}</span><b class="${r.lucro > 0 ? "pos" : "neg"}">${money(r.lucro * n)}</b></div>` : ""}
+      <div class="need-a">${sabe}<button class="btn ghost sm" id="ah-copy" type="button">Copiar lista de compras</button></div>
+    </div>`;
     h += `<h5>Conta</h5><div class="kv">
       <span class="k">Custo dos materiais</span><span>${r.completo ? money(r.custo) : "incompleto"}</span>
       <span class="k">Vende por (mais barato na AH)</span><span>${money(r.venda)}</span>
@@ -233,6 +245,19 @@
     h += `<p class="note">"Mercado" é a média dos 15% mais baratos (ignora um anúncio isolado muito barato). Materiais de NPC usam o preço do vendedor.</p>`;
     d.innerHTML = h;
     $("ah-close").addEventListener("click", () => { selected = null; renderRows(); renderDetail(); });
+    $("ah-qty").addEventListener("change", (e) => {
+      craftQty = Math.min(999, Math.max(1, parseInt(e.target.value, 10) || 1));
+      renderDetail();
+      $("ah-qty").focus();
+    });
+    $("ah-copy").addEventListener("click", () => {
+      const plain = (c) => (c == null ? "?" : (c >= 10000 ? Math.floor(c / 10000) + "g " : "") + (Math.floor(c / 100) % 100) + "s " + (c % 100) + "c");
+      const lines = [`Para fazer ${craftQty}x ${r.nome}:`].concat(
+        r.materiais.map((m) => `- ${m.qtd * craftQty}x ${m.nome} (${m.fonte === "npc" ? "NPC" : m.fonte === "ah" ? "AH" : "sem oferta"}, ${plain(m.preco == null ? null : m.preco * m.qtd * craftQty)})`),
+        [`Total: ${plain(r.custo * craftQty)}`]);
+      send("copy", { text: lines.join("\n") });
+      toast("ok", "Lista copiada! É só colar (Ctrl+V).");
+    });
     if (history.item !== r.item) send("ahHistory", { item: r.item });
   }
 
