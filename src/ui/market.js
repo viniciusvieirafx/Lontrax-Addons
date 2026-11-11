@@ -194,7 +194,7 @@
     if (!r) { d.hidden = true; return; }
     d.hidden = false;
     const fee = r.venda == null ? null : Math.round(r.venda * (st.taxa || 0.05));
-    let h = `<h4>${esc(r.nome)}</h4><div class="sub">${esc(r.profissao)} · ${esc(r.categoria)}${r.qtdFeita > 1 ? ` · faz ${r.qtdFeita} por vez` : ""}</div>`;
+    let h = `<button class="ah-close" id="ah-close" type="button" title="Fechar">×</button><h4>${esc(r.nome)}</h4><div class="sub">${esc(r.profissao)} · ${esc(r.categoria)}${r.qtdFeita > 1 ? ` · faz ${r.qtdFeita} por vez` : ""}</div>`;
     h += `<h5>Materiais</h5><table class="mats">`;
     r.materiais.forEach((m) => {
       const tag = m.fonte === "npc" ? '<span class="src npc">NPC</span>' : m.fonte === "ah" ? '<span class="src ah">AH</span>' : '<span class="src falta">SEM OFERTA</span>';
@@ -212,6 +212,7 @@
     h += `<h5>Preço nos últimos dias</h5><div id="ah-chart">${chart(history.item === r.item ? history.pontos : null)}</div>`;
     h += `<p class="note">"Mercado" é a média dos 15% mais baratos (ignora um anúncio isolado muito barato). Materiais de NPC usam o preço do vendedor.</p>`;
     d.innerHTML = h;
+    $("ah-close").addEventListener("click", () => { selected = null; renderRows(); renderDetail(); });
     if (history.item !== r.item) send("ahHistory", { item: r.item });
   }
 

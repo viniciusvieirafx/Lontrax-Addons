@@ -52,6 +52,18 @@
 .ah-table-wrap { flex: 1; min-width: 0; overflow: auto; border: 1px solid rgba(217,180,90,.3); border-radius: var(--radius); background: rgba(8,17,41,.7); }
 .ah-table-wrap::-webkit-scrollbar, .ah-detail::-webkit-scrollbar { width: 10px; height: 10px; }
 .ah-table-wrap::-webkit-scrollbar-thumb, .ah-detail::-webkit-scrollbar-thumb { background: rgba(217,180,90,.35); border-radius: 10px; }
+.ah-table-wrap::-webkit-scrollbar-track, .ah-detail::-webkit-scrollbar-track { background: rgba(5,10,24,.6); }
+.ah-table-wrap::-webkit-scrollbar-corner, .ah-detail::-webkit-scrollbar-corner { background: transparent; }
+.ah-body { position: relative; }
+/* window not very wide: the detail panel slides over the table instead of squeezing it */
+@media (max-width: 1399px) {
+  .ah-detail { position: absolute; top: 0; right: 28px; bottom: 14px; z-index: 3; box-shadow: -20px 0 40px rgba(0,0,0,.65); }
+}
+.ah-close {
+  float: right; margin: -6px -6px 0 8px; width: 30px; height: 30px; border-radius: 8px; cursor: pointer;
+  background: rgba(8,17,41,.8); color: var(--gold-hi); border: 1px solid rgba(217,180,90,.4); font: 700 18px/1 var(--sans);
+}
+.ah-close:hover { background: rgba(31,63,148,.6); }
 .ah-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
 .ah-table th {
   position: sticky; top: 0; z-index: 1; text-align: left; cursor: pointer; white-space: nowrap;
@@ -67,7 +79,7 @@
 .ah-table tbody tr { cursor: pointer; }
 .ah-table tbody tr:hover { background: rgba(47,88,196,.18); }
 .ah-table tbody tr.sel { background: rgba(217,180,90,.14); box-shadow: inset 3px 0 0 var(--gold); }
-.ah-table td.item { color: var(--text); font-weight: 600; max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
+.ah-table td.item { color: var(--text); font-weight: 600; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
 .ah-table td.prof { color: var(--muted); font-size: 13px; }
 .thin { color: var(--warn); font-size: 11px; margin-left: 6px; }
 .up { color: var(--ok); } .down { color: var(--bad); } .flat { color: var(--muted); }
