@@ -29,6 +29,9 @@ static class Program
         try
         {
             ApplicationConfiguration.Initialize();
+            // Never show the .NET crash box to friends: log it and keep going.
+            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+            Application.ThreadException += (_, e) => MainForm.LogError("unhandled", e.Exception);
             Application.Run(new MainForm(startHidden: args.Contains("--tray"), showEvt, quitEvt));
         }
         finally

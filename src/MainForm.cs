@@ -9,7 +9,8 @@ namespace LontraxAddons;
 
 sealed class MainForm : Form
 {
-    readonly WebView2 web = new() { Dock = DockStyle.Fill, DefaultBackgroundColor = Color.FromArgb(7, 13, 31) };
+    WebView2 web = NewWeb();
+    static WebView2 NewWeb() => new() { Dock = DockStyle.Fill, DefaultBackgroundColor = Color.FromArgb(7, 13, 31) };
     readonly Settings settings = Settings.Load();
     readonly GitHubClient gh = new();
     CatalogFile? catalog;
@@ -230,28 +231,68 @@ sealed class MainForm : Form
 
     async Task InitWeb()
     {
-        try
+        // The page engine (WebView2) can fail to start right after boot or an update (the old copy's
+        // engine is still closing: E_ABORT). Never crash: try again a few times with a fresh control.
+        var uiDir = ExtractUi();
+        for (int attempt = 1; ; attempt++)
         {
-            var uiDir = ExtractUi();
-            var env = await CoreWebView2Environment.CreateAsync(null, Path.Combine(Config.DataDir, "webview"));
-            await web.EnsureCoreWebView2Async(env);
-            var core = web.CoreWebView2;
-            core.Settings.AreDevToolsEnabled = Debugger.IsAttached;
-            core.Settings.IsZoomControlEnabled = false;
-            core.Settings.AreDefaultContextMenusEnabled = false;
-            core.Settings.IsStatusBarEnabled = false;
-            core.SetVirtualHostNameToFolderMapping("app.lontrax", uiDir, CoreWebView2HostResourceAccessKind.Allow);
-            core.WebMessageReceived += async (_, e) => await OnMessage(e.WebMessageAsJson);
-            core.NewWindowRequested += (_, e) => { e.Handled = true; OpenUrl(e.Uri); };
-            core.Navigate("https://app.lontrax/index.html");
+            try
+            {
+                var env = await CoreWebView2Environment.CreateAsync(null, Path.Combine(Config.DataDir, "webview"));
+                await web.EnsureCoreWebView2Async(env);
+                var core = web.CoreWebView2;
+                core.Settings.AreDevToolsEnabled = Debugger.IsAttached;
+                core.Settings.IsZoomControlEnabled = false;
+                core.Settings.AreDefaultContextMenusEnabled = false;
+                core.Settings.IsStatusBarEnabled = false;
+                core.SetVirtualHostNameToFolderMapping("app.lontrax", uiDir, CoreWebView2HostResourceAccessKind.Allow);
+                core.WebMessageReceived += async (_, e) => await OnMessage(e.WebMessageAsJson);
+                core.NewWindowRequested += (_, e) => { e.Handled = true; OpenUrl(e.Uri); };
+                core.ProcessFailed += (_, e) => { LogError("webview", new Exception("ProcessFailed " + e.ProcessFailedKind)); BeginInvoke(RestartWeb); };
+                core.Navigate("https://app.lontrax/index.html");
+                return;
+            }
+            catch (WebView2RuntimeNotFoundException)
+            {
+                if (MessageBox.Show("Falta um componente do Windows (Microsoft Edge WebView2).\n\nQuer abrir a página para instalar? Depois é só abrir o Lontrax Addons de novo.",
+                        Text, MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                    OpenUrl("https://go.microsoft.com/fwlink/p/?LinkId=2124703");
+                exiting = true;
+                Close();
+                return;
+            }
+            catch (Exception ex)
+            {
+                LogError("webview", ex);
+                if (exiting || IsDisposed) return;
+                if (attempt >= 6)
+                {
+                    MessageBox.Show("Não consegui abrir a tela do Lontrax Addons. Feche o app (botão direito no ícone perto do relógio > Sair) e abra de novo.",
+                        Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                await Task.Delay(1500 * attempt);
+                ReplaceWeb();
+            }
         }
-        catch (WebView2RuntimeNotFoundException)
-        {
-            if (MessageBox.Show("Falta um componente do Windows (Microsoft Edge WebView2).\n\nQuer abrir a página para instalar? Depois é só abrir o Lontrax Addons de novo.",
-                    Text, MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-                OpenUrl("https://go.microsoft.com/fwlink/p/?LinkId=2124703");
-            Close();
-        }
+    }
+
+    // A failed or crashed engine can't be reused: put a brand-new control in its place.
+    void ReplaceWeb()
+    {
+        var old = web;
+        web = NewWeb();
+        Controls.Add(web);
+        Controls.Remove(old);
+        try { old.Dispose(); } catch { }
+    }
+
+    bool restarting;
+    async void RestartWeb()
+    {
+        if (restarting || exiting || IsDisposed) return;
+        restarting = true;
+        try { ReplaceWeb(); await InitWeb(); } finally { restarting = false; }
     }
 
     static string ExtractUi()
@@ -441,7 +482,7 @@ sealed class MainForm : Form
         try { Clipboard.SetDataObject(text, true, 10, 100); } catch (Exception ex) { LogError("clipboard", ex); }
     }
 
-    static void LogError(string where, Exception ex)
+    internal static void LogError(string where, Exception ex)
     {
         try
         {
