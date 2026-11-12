@@ -29,6 +29,20 @@
         "Interface"
       ],
       "obrigatorio": false
+    },
+    {
+      "id": "questlax",
+      "nome": "QuestLax - Missões",
+      "descricao": "Rastreador de missões que mostra só as da sua região, com botão para ver todas. Estilos Lontrax ou WoW, opacidade e português/inglês.",
+      "repo": "viniciusvieirafx/QuestLax",
+      "ref": "main",
+      "pasta": "QuestLax",
+      "autor": "Lontrax",
+      "tags": [
+        "Missões",
+        "Interface"
+      ],
+      "obrigatorio": false
     }
   ]
 }
