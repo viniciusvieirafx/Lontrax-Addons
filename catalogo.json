@@ -61,6 +61,21 @@
         "Interface"
       ],
       "obrigatorio": false
+    },
+    {
+      "id": "chatframe",
+      "nome": "ChatFrame - Chat",
+      "descricao": "Chat limpo com abas de Área, Grupo, Guilda, Sussurros, Canais e Avisos. Comércio da capital e \"você recebeu...\" ficam fora do caminho, ícone da classe do seu grupo, letra e opacidade ajustáveis. Visual escuro do MF.",
+      "repo": "viniciusvieirafx/ChatFrame",
+      "ref": "main",
+      "pasta": "ChatFrame",
+      "banner": "banner.webp",
+      "autor": "Lontrax",
+      "tags": [
+        "Chat",
+        "Interface"
+      ],
+      "obrigatorio": false
     }
   ]
 }
