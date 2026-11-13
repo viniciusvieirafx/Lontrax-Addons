@@ -246,8 +246,10 @@ sealed class MainForm : Form
                 core.Settings.AreDefaultContextMenusEnabled = false;
                 core.Settings.IsStatusBarEnabled = false;
                 core.SetVirtualHostNameToFolderMapping("app.lontrax", uiDir, CoreWebView2HostResourceAccessKind.Allow);
-                Directory.CreateDirectory(BannerDir);
-                core.SetVirtualHostNameToFolderMapping("banners.lontrax", BannerDir, CoreWebView2HostResourceAccessKind.Allow);
+                // Banners are served by the app itself (not a folder mapping): the page engine can be denied
+                // reading files in the data folder on some PCs (extra permissions inherited from AppData).
+                core.AddWebResourceRequestedFilter("https://banners.lontrax/*", CoreWebView2WebResourceContext.All);
+                core.WebResourceRequested += (_, e) => ServeBanner(core, e);
                 core.WebMessageReceived += async (_, e) => await OnMessage(e.WebMessageAsJson);
                 core.NewWindowRequested += (_, e) => { e.Handled = true; OpenUrl(e.Uri); };
                 core.ProcessFailed += (_, e) => { LogError("webview", new Exception("ProcessFailed " + e.ProcessFailedKind)); BeginInvoke(RestartWeb); };
@@ -573,6 +575,23 @@ sealed class MainForm : Form
         if (ext is not (".png" or ".jpg" or ".jpeg" or ".webp" or ".gif")) return null;
         var safeId = string.Concat(e.Id.Where(ch => char.IsLetterOrDigit(ch) || ch is '-' or '_'));
         return $"{safeId}-{c.Sha[..7]}{ext}";
+    }
+
+    void ServeBanner(CoreWebView2 core, CoreWebView2WebResourceRequestedEventArgs e)
+    {
+        try
+        {
+            var name = Path.GetFileName(Uri.UnescapeDataString(new Uri(e.Request.Uri).AbsolutePath));
+            var file = Path.Combine(BannerDir, name);
+            if (name.Length == 0 || !File.Exists(file)) { e.Response = core.Environment.CreateWebResourceResponse(null, 404, "Not Found", ""); return; }
+            var type = Path.GetExtension(name).ToLowerInvariant() switch
+            {
+                ".png" => "image/png", ".webp" => "image/webp", ".gif" => "image/gif", _ => "image/jpeg",
+            };
+            var stream = new MemoryStream(File.ReadAllBytes(file));
+            e.Response = core.Environment.CreateWebResourceResponse(stream, 200, "OK", $"Content-Type: {type}\r\nCache-Control: max-age=86400");
+        }
+        catch (Exception ex) { LogError("banner", ex); }
     }
 
     async Task<bool> FetchBanners()
