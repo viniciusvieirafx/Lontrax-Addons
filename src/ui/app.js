@@ -122,6 +122,13 @@
       c.dataset.id = it.id;
       c.style.animationDelay = i * 40 + "ms";
       c.querySelector(".card-title").textContent = it.nome || it.id;
+      if (it.banner) {
+        const b = c.querySelector(".card-banner"), img = b.querySelector("img");
+        img.onload = () => { b.hidden = false; c.classList.add("has-banner"); };
+        img.onerror = () => { b.hidden = true; c.classList.remove("has-banner"); };
+        img.src = it.banner;
+        img.alt = it.nome || "";
+      }
       c.querySelector(".card-desc").textContent = it.descricao || "";
       const st = c.querySelector(".status");
       st.textContent = LABEL[it.status] || it.status;

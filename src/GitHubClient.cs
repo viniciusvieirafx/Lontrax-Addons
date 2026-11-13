@@ -119,6 +119,13 @@ sealed class GitHubClient
         return await res.Content.ReadAsStringAsync();
     }
 
+    public async Task<byte[]> GetRawBytes(string repo, string path, string gitRef)
+    {
+        using var res = await Send(Api($"/repos/{repo}/contents/{Uri.EscapeDataString(path)}?ref={Uri.EscapeDataString(gitRef)}",
+            "application/vnd.github.raw+json"));
+        return await res.Content.ReadAsByteArrayAsync();
+    }
+
     public sealed record CommitInfo(string Sha, string Message, DateTimeOffset Date);
 
     public async Task<CommitInfo> GetLatestCommit(string repo, string gitRef)

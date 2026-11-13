@@ -24,6 +24,8 @@ sealed class CatalogEntry
     public string? Autor { get; set; }
     public List<string>? Tags { get; set; }
     public bool Obrigatorio { get; set; }
+    /// <summary>Optional banner image (png/jpg/webp, ideally 16:9) inside the addon's own repo, e.g. "Media/banner.webp".</summary>
+    public string? Banner { get; set; }
 
     public List<FolderMap> Folders() => Pastas is { Count: > 0 }
         ? Pastas

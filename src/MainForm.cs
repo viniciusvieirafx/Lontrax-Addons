@@ -246,6 +246,8 @@ sealed class MainForm : Form
                 core.Settings.AreDefaultContextMenusEnabled = false;
                 core.Settings.IsStatusBarEnabled = false;
                 core.SetVirtualHostNameToFolderMapping("app.lontrax", uiDir, CoreWebView2HostResourceAccessKind.Allow);
+                Directory.CreateDirectory(BannerDir);
+                core.SetVirtualHostNameToFolderMapping("banners.lontrax", BannerDir, CoreWebView2HostResourceAccessKind.Allow);
                 core.WebMessageReceived += async (_, e) => await OnMessage(e.WebMessageAsJson);
                 core.NewWindowRequested += (_, e) => { e.Handled = true; OpenUrl(e.Uri); };
                 core.ProcessFailed += (_, e) => { LogError("webview", new Exception("ProcessFailed " + e.ProcessFailedKind)); BeginInvoke(RestartWeb); };
@@ -543,7 +545,10 @@ sealed class MainForm : Form
     {
         if (gh.Token == null || busy) return;
         if (!quiet) Post(new { type = "loading" });
-        var raw = await gh.GetRawFile(Config.CatalogRepo, Config.CatalogFile, Config.CatalogRef);
+        // LONTRAX_CATALOG: tests read a local catalogo.json instead of the real one.
+        var localCatalog = Environment.GetEnvironmentVariable("LONTRAX_CATALOG");
+        var raw = localCatalog != null ? File.ReadAllText(localCatalog)
+            : await gh.GetRawFile(Config.CatalogRepo, Config.CatalogFile, Config.CatalogRef);
         catalog = JsonSerializer.Deserialize<CatalogFile>(raw, GitHubClient.JsonOptions) ?? new CatalogFile();
         latest.Clear();
         var errors = new Dictionary<string, string>();
@@ -553,6 +558,52 @@ sealed class MainForm : Form
             catch (GitHubException ex) { lock (errors) errors[e.Id] = ex.Message; }
         }));
         SendAddons(errors);
+        // Banners come after the list (the cards show right away, the pictures pop in).
+        if (await FetchBanners()) SendAddons(errors);
+    }
+
+    // ---------- addon banners ----------
+    static string BannerDir => Path.Combine(Config.DataDir, "banners");
+
+    /// <summary>Cached file name of an addon's banner: changes with each new version of the addon.</summary>
+    string? BannerFile(CatalogEntry e)
+    {
+        if (string.IsNullOrWhiteSpace(e.Banner) || !latest.TryGetValue(e.Id, out var c)) return null;
+        var ext = Path.GetExtension(e.Banner).ToLowerInvariant();
+        if (ext is not (".png" or ".jpg" or ".jpeg" or ".webp" or ".gif")) return null;
+        var safeId = string.Concat(e.Id.Where(ch => char.IsLetterOrDigit(ch) || ch is '-' or '_'));
+        return $"{safeId}-{c.Sha[..7]}{ext}";
+    }
+
+    async Task<bool> FetchBanners()
+    {
+        if (catalog == null) return false;
+        var got = false;
+        foreach (var e in catalog.Addons)
+        {
+            var name = BannerFile(e);
+            if (name == null) continue;
+            var file = Path.Combine(BannerDir, name);
+            if (File.Exists(file)) continue;
+            try
+            {
+                var bytes = await gh.GetRawBytes(e.Repo, e.Banner!, latest[e.Id].Sha);
+                if (bytes.Length == 0 || bytes.Length > 8_000_000) continue;
+                Directory.CreateDirectory(BannerDir);
+                File.WriteAllBytes(file, bytes);
+                // Old versions of this addon's banner are not needed anymore.
+                var prefix = name[..(name.Length - 7 - Path.GetExtension(name).Length)]; // "id-"
+                foreach (var old in Directory.GetFiles(BannerDir))
+                {
+                    var n = Path.GetFileNameWithoutExtension(old);
+                    if (n.Length == prefix.Length + 7 && n.StartsWith(prefix) && Path.GetFileName(old) != name)
+                        try { File.Delete(old); } catch { }
+                }
+                got = true;
+            }
+            catch (Exception ex) { LogError("banner", ex); }
+        }
+        return got;
     }
 
     void SendAddons(Dictionary<string, string>? errors = null)
@@ -575,6 +626,7 @@ sealed class MainForm : Form
             {
                 id = e.Id, nome = e.Nome, descricao = e.Descricao, autor = e.Autor, tags = e.Tags ?? new List<string>(),
                 repo = e.Repo, status, erro = err, obrigatorio = e.Obrigatorio,
+                banner = BannerFile(e) is string bf && File.Exists(Path.Combine(BannerDir, bf)) ? "https://banners.lontrax/" + bf : null,
                 instalado = inst == null ? null : new { sha = inst.Sha[..7], data = inst.Instalado.ToString("dd/MM/yyyy HH:mm") },
                 novo = c == null ? null : new { sha = c.Sha[..7], data = c.Date.ToLocalTime().ToString("dd/MM/yyyy HH:mm"), msg = c.Message },
             };
