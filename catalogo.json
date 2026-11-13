@@ -43,6 +43,20 @@
         "Interface"
       ],
       "obrigatorio": false
+    },
+    {
+      "id": "lontraxmeter",
+      "nome": "LontraxMeter - Medidor",
+      "descricao": "Medidor de dano, cura, dano recebido, interrupções, mortes e agro, só da luta atual. Mostra várias coisas ao mesmo tempo e tem engrenagem para configurar. Visual escuro do MF.",
+      "repo": "viniciusvieirafx/LontraxMeter",
+      "ref": "main",
+      "pasta": "LontraxMeter",
+      "autor": "Lontrax",
+      "tags": [
+        "Combate",
+        "Interface"
+      ],
+      "obrigatorio": false
     }
   ]
 }
