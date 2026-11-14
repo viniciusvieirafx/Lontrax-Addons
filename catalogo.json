@@ -76,6 +76,21 @@
         "Interface"
       ],
       "obrigatorio": false
+    },
+    {
+      "id": "lontraxemotes",
+      "nome": "LontraxEmotes - Emotes",
+      "descricao": "Menu redondo de emotes com um desenho de cada um: segure Alt+E, aponte e solte. 48 emotes em páginas (saudações, alegria, combate...) e seus favoritos. Visual escuro do MF.",
+      "repo": "viniciusvieirafx/LontraxEmotes",
+      "ref": "main",
+      "pasta": "LontraxEmotes",
+      "banner": "banner.webp",
+      "autor": "Lontrax",
+      "tags": [
+        "Emotes",
+        "Interface"
+      ],
+      "obrigatorio": false
     }
   ]
 }
