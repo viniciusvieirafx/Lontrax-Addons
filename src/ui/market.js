@@ -438,6 +438,8 @@
       .slice()
       .sort((x, y) => {
         if (bagsSort === "nome") return bagsDir * itemName(x).localeCompare(itemName(y), "pt-BR");
+        const ORDER = { ah: 0, npc: 1, sem: 2, nada: 3 };
+        if (bagsSort === "onde") return bagsDir * ((ORDER[x.onde] ?? 9) - (ORDER[y.onde] ?? 9)) || y.ganho - x.ganho;
         const v = (a) => (bagsSort === "qtd" ? a.qtd : bagsSort === "ah" ? a.ahUnidade ?? -1 : bagsSort === "npc" ? a.npcUnidade : bagsSort === "aVenda" ? a.aVenda : a.ganho);
         return bagsDir * (v(x) - v(y));
       });
@@ -449,8 +451,9 @@
             <option value="ganho"${bagsSort === "ganho" ? " selected" : ""}>Mais ouro primeiro</option>
             <option value="nome"${bagsSort === "nome" ? " selected" : ""}>Nome (A a Z)</option>
             <option value="qtd"${bagsSort === "qtd" ? " selected" : ""}>Quantidade</option>
+            <option value="onde"${bagsSort === "onde" ? " selected" : ""}>Tipo de venda (AH, depois NPC)</option>
           </select></label>
-        <span class="chips-inline">${chip("todos", "Todos")}${chip("ah", "Vender na AH")}${chip("npc", "Vender no NPC")}${chip("outros", "Sem valor / ninguém vende")}</span>
+        <span class="chips-inline"><span class="opt">Mostrar:</span>${chip("todos", "Todos")}${chip("ah", "Vender na AH")}${chip("npc", "Vender no NPC")}${chip("outros", "Sem valor / ninguém vende")}</span>
       </div>`;
     }
     const th = (key, label, num) => `<th data-sort="${key}" class="${num ? "num " : ""}${bagsSort === key ? "sorted " + (bagsDir < 0 ? "desc" : "asc") : ""}">${label}</th>`;
@@ -460,7 +463,7 @@
       h += `<p class="note">Nenhum item nesse filtro.</p>`;
     } else {
       h += `<div class="bags-wrap"><table class="bags-table"><thead><tr>
-        ${th("nome", "Item")}${th("qtd", "Qtd", 1)}<th>O que fazer</th>${th("ganho", "Você ganha", 1)}
+        ${th("nome", "Item")}${th("qtd", "Qtd", 1)}${th("onde", "O que fazer")}${th("ganho", "Você ganha", 1)}
         ${th("ah", "AH (cada)", 1)}${th("npc", "NPC (cada)", 1)}${th("aVenda", "À venda", 1)}<th>Dica</th></tr></thead><tbody>`;
       shown.forEach((a) => {
         const nome = itemName(a);
@@ -481,11 +484,11 @@
     if (sel) sel.addEventListener("change", (e) => { bagsChar = +e.target.value; renderBags(); });
     body.querySelectorAll(".tabs-mini button").forEach((b) => b.addEventListener("click", () => { bagsTab = b.dataset.t; renderBags(); }));
     const so = $("bags-sort");
-    if (so) so.addEventListener("change", (e) => { bagsSort = e.target.value; bagsDir = bagsSort === "nome" ? 1 : -1; renderBags(); });
+    if (so) so.addEventListener("change", (e) => { bagsSort = e.target.value; bagsDir = bagsSort === "nome" || bagsSort === "onde" ? 1 : -1; renderBags(); });
     body.querySelectorAll("[data-show]").forEach((b) => b.addEventListener("click", () => { bagsShow = b.dataset.show; renderBags(); }));
     body.querySelectorAll(".bags-table th[data-sort]").forEach((t) => t.addEventListener("click", () => {
       const k = t.dataset.sort;
-      if (bagsSort === k) bagsDir = -bagsDir; else { bagsSort = k; bagsDir = k === "nome" ? 1 : -1; }
+      if (bagsSort === k) bagsDir = -bagsDir; else { bagsSort = k; bagsDir = k === "nome" || k === "onde" ? 1 : -1; }
       renderBags();
     }));
   }
