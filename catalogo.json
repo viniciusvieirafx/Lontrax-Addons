@@ -95,7 +95,7 @@
     {
       "id": "lontraxmercado",
       "nome": "Lontrax Mercado - Mochila",
-      "descricao": "Anota o que tem nas suas bolsas e no banco para a aba Mercado do app dizer o que vale a pena vender na Casa de Leilões. Só lê: não vende nem compra nada.",
+      "descricao": "Mostra no item o preço do NPC e da Casa de Leilões (com aviso de quando os preços foram pegos), tem o botão Escanear tudo na Casa de Leilões e anota bolsas e banco para a aba Mercado do app dizer o que vale a pena vender. Só lê: não vende nem compra nada.",
       "repo": "viniciusvieirafx/LontraxMercado",
       "ref": "main",
       "pasta": "LontraxMercado",
