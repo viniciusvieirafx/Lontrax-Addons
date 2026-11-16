@@ -386,6 +386,7 @@
 
   // ---------- my bags: what is worth selling ----------
   let bags = null, bagsChar = 0, bagsTab = "bolsas", bagsOpen = false;
+  let bagsSort = "ganho", bagsDir = -1, bagsShow = "todos";   // sorting and "show only" filter in the backpack window
   const WHERE = { ah: "Vender na AH", npc: "Vender no NPC", sem: "Ninguém vende na AH", nada: "Sem valor" };
 
   function openBags() {
@@ -428,14 +429,41 @@
       <div>Vender no NPC<b>${money(sum("npc"))}</b></div>
       <div>Ouro no personagem<b>${money(c.dinheiro)}</b></div>
     </div>`;
+    // Filters: sort by value / name / quantity, show only one kind of sale.
+    const itemName = (a) => (lang === "en" && EN && EN.itens[a.id]) || a.nome;
+    const counts = { todos: list.length, ah: 0, npc: 0, outros: 0 };
+    list.forEach((a) => (a.onde === "ah" ? counts.ah++ : a.onde === "npc" ? counts.npc++ : counts.outros++));
+    const shown = list
+      .filter((a) => bagsShow === "todos" || (bagsShow === "outros" ? a.onde !== "ah" && a.onde !== "npc" : a.onde === bagsShow))
+      .slice()
+      .sort((x, y) => {
+        if (bagsSort === "nome") return bagsDir * itemName(x).localeCompare(itemName(y), "pt-BR");
+        const v = (a) => (bagsSort === "qtd" ? a.qtd : bagsSort === "ah" ? a.ahUnidade ?? -1 : bagsSort === "npc" ? a.npcUnidade : bagsSort === "aVenda" ? a.aVenda : a.ganho);
+        return bagsDir * (v(x) - v(y));
+      });
+    if (list.length) {
+      const chip = (k, label) => `<button type="button" class="chip${bagsShow === k ? " on" : ""}" data-show="${k}">${label}<span class="n">${counts[k]}</span></button>`;
+      h += `<div class="bags-filters">
+        <label class="opt">Ordenar por
+          <select id="bags-sort">
+            <option value="ganho"${bagsSort === "ganho" ? " selected" : ""}>Mais ouro primeiro</option>
+            <option value="nome"${bagsSort === "nome" ? " selected" : ""}>Nome (A a Z)</option>
+            <option value="qtd"${bagsSort === "qtd" ? " selected" : ""}>Quantidade</option>
+          </select></label>
+        <span class="chips-inline">${chip("todos", "Todos")}${chip("ah", "Vender na AH")}${chip("npc", "Vender no NPC")}${chip("outros", "Sem valor / ninguém vende")}</span>
+      </div>`;
+    }
+    const th = (key, label, num) => `<th data-sort="${key}" class="${num ? "num " : ""}${bagsSort === key ? "sorted " + (bagsDir < 0 ? "desc" : "asc") : ""}">${label}</th>`;
     if (!list.length) {
       h += `<p class="note">${bagsTab === "banco" ? "Nada anotado do banco ainda." : "Bolsas vazias."}</p>`;
+    } else if (!shown.length) {
+      h += `<p class="note">Nenhum item nesse filtro.</p>`;
     } else {
       h += `<div class="bags-wrap"><table class="bags-table"><thead><tr>
-        <th>Item</th><th class="num">Qtd</th><th>O que fazer</th><th class="num">Você ganha</th>
-        <th class="num">AH (cada)</th><th class="num">NPC (cada)</th><th class="num">À venda</th><th>Dica</th></tr></thead><tbody>`;
-      list.forEach((a) => {
-        const nome = (lang === "en" && EN && EN.itens[a.id]) || a.nome;
+        ${th("nome", "Item")}${th("qtd", "Qtd", 1)}<th>O que fazer</th>${th("ganho", "Você ganha", 1)}
+        ${th("ah", "AH (cada)", 1)}${th("npc", "NPC (cada)", 1)}${th("aVenda", "À venda", 1)}<th>Dica</th></tr></thead><tbody>`;
+      shown.forEach((a) => {
+        const nome = itemName(a);
         const dica = a.craft
           ? `<span class="tip${a.craftConhecida ? " known" : ""}">Serve para ${esc((lang === "en" && EN && a.craftItem && EN.itens[a.craftItem]) || a.craft)} (+${money(a.craftLucro)} por craft)${a.craftConhecida ? " · você sabe" : ""}</span>`
           : a.vinculado ? '<span class="flat">vinculado: só NPC</span>'
@@ -452,6 +480,14 @@
     const sel = $("bags-char");
     if (sel) sel.addEventListener("change", (e) => { bagsChar = +e.target.value; renderBags(); });
     body.querySelectorAll(".tabs-mini button").forEach((b) => b.addEventListener("click", () => { bagsTab = b.dataset.t; renderBags(); }));
+    const so = $("bags-sort");
+    if (so) so.addEventListener("change", (e) => { bagsSort = e.target.value; bagsDir = bagsSort === "nome" ? 1 : -1; renderBags(); });
+    body.querySelectorAll("[data-show]").forEach((b) => b.addEventListener("click", () => { bagsShow = b.dataset.show; renderBags(); }));
+    body.querySelectorAll(".bags-table th[data-sort]").forEach((t) => t.addEventListener("click", () => {
+      const k = t.dataset.sort;
+      if (bagsSort === k) bagsDir = -bagsDir; else { bagsSort = k; bagsDir = k === "nome" ? 1 : -1; }
+      renderBags();
+    }));
   }
 
   // ---------- events ----------
