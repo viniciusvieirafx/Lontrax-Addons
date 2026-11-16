@@ -188,6 +188,10 @@
 .bags-table th[data-sort]:hover, .bags-table th.sorted { color: var(--gold-hi); }
 .bags-table th.sorted.desc::after { content: " \25BC"; font-size: 9px; }
 .bags-table th.sorted.asc::after { content: " \25B2"; font-size: 9px; }
+/* the window has a max height: the body fills what is left under the title and only the table scrolls
+   (without this, a long backpack list grew past the bottom of the window) */
+#ah-bags-body { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+#ah-bags-body > :not(.bags-wrap) { flex-shrink: 0; }
 .bags-wrap { overflow: auto; min-height: 0; flex: 1; border: 1px solid rgba(217,180,90,.25); border-radius: 10px; }
 .bags-wrap::-webkit-scrollbar { width: 10px; } .bags-wrap::-webkit-scrollbar-thumb { background: rgba(217,180,90,.35); border-radius: 10px; }
 .bags-wrap::-webkit-scrollbar-corner { background: transparent; }
