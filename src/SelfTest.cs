@@ -100,6 +100,34 @@ static class SelfTest
         catch (Exception ex) { W("FAIL " + ex); return 1; }
     }
 
+    /// <summary>"--selftest-bags &lt;log&gt; &lt;AddOns folder&gt; &lt;house&gt;": reads LontraxMercado.lua and prints the advice.
+    /// Needs prices already cached in LONTRAX_DATA (run --selftest-market first).</summary>
+    public static async Task<int> RunBags(string logPath, string addOns, int house)
+    {
+        var log = new StringBuilder();
+        void W(string s) { log.AppendLine(s); File.WriteAllText(logPath, log.ToString()); }
+        try
+        {
+            var m = new Market();
+            await m.LoadRecipes(null);
+            W("files: " + string.Join(", ", Bags.Files(addOns)));
+            var chars = Bags.Read(addOns);
+            foreach (var c in chars)
+            {
+                W($"{c.nome} nivel {c.nivel} ouro {c.dinheiro} atualizado {c.atualizado} banco {c.bancoAtualizado}: {c.bolsas.Count} itens bolsa, {c.banco.Count} banco");
+                foreach (var a in Bags.Advise(m, house, c.bolsas.Concat(c.banco), null))
+                    W($"  {a.nome,-22} x{a.qtd,-3} {a.onde,-4} ganha {a.ganho,7}c  ah {a.ahUnidade}c npc {a.npcUnidade}c  venda {a.aVenda}  {(a.craft == null ? "" : "craft: " + a.craft + " +" + a.craftLucro)}");
+            }
+            File.WriteAllText(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(logPath))!, "ah-bags.json"),
+                JsonSerializer.Serialize(new { type = "ahBags", achou = true, personagens = chars.Select(c => new {
+                    c.guid, c.nome, c.nivel, c.dinheiro, atualizado = c.atualizado?.ToString("dd/MM HH:mm"), bancoAtualizado = c.bancoAtualizado?.ToString("dd/MM HH:mm"),
+                    bolsas = Bags.Advise(m, house, c.bolsas, null), banco = Bags.Advise(m, house, c.banco, null) }) }));
+            W(chars.Count > 0 ? "BAGS OK" : "BAGS: nothing read");
+            return chars.Count > 0 ? 0 : 1;
+        }
+        catch (Exception ex) { W("FAIL " + ex); return 1; }
+    }
+
     public static async Task<int> Run(string logPath)
     {
         var log = new StringBuilder();

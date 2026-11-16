@@ -384,7 +384,79 @@
     send("ahSetHouse", { id });
   }
 
+  // ---------- my bags: what is worth selling ----------
+  let bags = null, bagsChar = 0, bagsTab = "bolsas", bagsOpen = false;
+  const WHERE = { ah: "Vender na AH", npc: "Vender no NPC", sem: "Ninguém vende na AH", nada: "Sem valor" };
+
+  function openBags() {
+    bagsOpen = true;
+    $("ah-bags").hidden = false;
+    $("ah-bags-body").innerHTML = '<p class="waiting"><span class="spinner"></span> Lendo suas bolsas…</p>';
+    send("ahBags");
+    // Browser preview: sample made by --selftest-bags.
+    if (!host) fetch("ah-bags.json").then((r) => (r.ok ? r.json() : null)).then((d) => { if (d) { bags = d; renderBags(); } }).catch(() => {});
+  }
+  function closeBags() { bagsOpen = false; $("ah-bags").hidden = true; }
+
+  function renderBags() {
+    const body = $("ah-bags-body");
+    if (!bags) return;
+    if (bags.semPrecos) { body.innerHTML = '<p class="note">Escolha a sua Casa de Leilões no Mercado primeiro (precisa dos preços).</p>'; return; }
+    if (!bags.personagens || !bags.personagens.length) {
+      body.innerHTML = `<p>${bags.achou ? "O addon ainda não anotou nenhuma bolsa." : "Ainda não achei as suas bolsas."}</p>
+        <ol class="steps">
+          <li>Na aba <b>Addons</b>, instale o <b>Lontrax Mercado</b>.</li>
+          <li>Entre no jogo com o personagem.</li>
+          <li>Digite <b>/reload</b> (ou deslogue). Para incluir o banco, abra o banco uma vez antes.</li>
+          <li>Volte aqui e clique em <b>Minha mochila</b> de novo.</li>
+        </ol>`;
+      return;
+    }
+    const c = bags.personagens[Math.min(bagsChar, bags.personagens.length - 1)];
+    const list = (bagsTab === "banco" ? c.banco : c.bolsas) || [];
+    const sum = (w) => list.filter((a) => a.onde === w).reduce((s, a) => s + a.ganho, 0);
+    let h = `<div class="bags-top">`;
+    if (bags.personagens.length > 1) {
+      h += `<select id="bags-char">${bags.personagens.map((p, i) => `<option value="${i}"${i === bagsChar ? " selected" : ""}>${esc(p.nome)} (nível ${p.nivel})</option>`).join("")}</select>`;
+    } else h += `<b>${esc(c.nome)}</b>`;
+    h += `<div class="tabs-mini"><button type="button" data-t="bolsas" class="${bagsTab === "bolsas" ? "on" : ""}">Bolsas</button><button type="button" data-t="banco" class="${bagsTab === "banco" ? "on" : ""}">Banco</button></div>`;
+    h += `<span class="flat">${bagsTab === "banco"
+      ? (c.bancoAtualizado ? `banco anotado em ${esc(c.bancoAtualizado)}` : "abra o banco no jogo uma vez e dê /reload")
+      : (c.atualizado ? `bolsas anotadas em ${esc(c.atualizado)} (atualiza no /reload ou ao deslogar)` : "")}</span></div>`;
+    h += `<div class="bags-sum">
+      <div>Vender na AH<b>${money(sum("ah"))}</b></div>
+      <div>Vender no NPC<b>${money(sum("npc"))}</b></div>
+      <div>Ouro no personagem<b>${money(c.dinheiro)}</b></div>
+    </div>`;
+    if (!list.length) {
+      h += `<p class="note">${bagsTab === "banco" ? "Nada anotado do banco ainda." : "Bolsas vazias."}</p>`;
+    } else {
+      h += `<div class="bags-wrap"><table class="bags-table"><thead><tr>
+        <th>Item</th><th class="num">Qtd</th><th>O que fazer</th><th class="num">Você ganha</th>
+        <th class="num">AH (cada)</th><th class="num">NPC (cada)</th><th class="num">À venda</th><th>Dica</th></tr></thead><tbody>`;
+      list.forEach((a) => {
+        const nome = (lang === "en" && EN && EN.itens[a.id]) || a.nome;
+        const dica = a.craft
+          ? `<span class="tip${a.craftConhecida ? " known" : ""}">Serve para ${esc((lang === "en" && EN && a.craftItem && EN.itens[a.craftItem]) || a.craft)} (+${money(a.craftLucro)} por craft)${a.craftConhecida ? " · você sabe" : ""}</span>`
+          : a.vinculado ? '<span class="flat">vinculado: só NPC</span>'
+          : a.onde === "sem" ? '<span class="flat">ninguém vendendo: você escolhe o preço</span>'
+          : a.onde === "ah" && a.aVenda > 200 ? '<span class="flat">muita gente vendendo: venda um pouco abaixo</span>' : "";
+        h += `<tr><td>${esc(nome)}</td><td class="num">${a.qtd}</td><td><span class="where ${a.onde}">${WHERE[a.onde] || a.onde}</span></td>
+          <td class="num">${money(a.ganho)}</td><td class="num">${a.ahUnidade == null ? "—" : money(a.ahUnidade)}</td>
+          <td class="num">${a.npcUnidade ? money(a.npcUnidade) : "—"}</td><td class="num">${a.ahUnidade == null ? "—" : a.aVenda}</td><td>${dica}</td></tr>`;
+      });
+      h += `</tbody></table></div>`;
+      h += `<p class="note">"Você ganha" na AH já tira os 5% da taxa e usa o anúncio mais barato de agora. Itens vinculados só dá para vender no NPC.</p>`;
+    }
+    body.innerHTML = h;
+    const sel = $("bags-char");
+    if (sel) sel.addEventListener("change", (e) => { bagsChar = +e.target.value; renderBags(); });
+    body.querySelectorAll(".tabs-mini button").forEach((b) => b.addEventListener("click", () => { bagsTab = b.dataset.t; renderBags(); }));
+  }
+
   // ---------- events ----------
+  $("ah-bags-open").addEventListener("click", openBags);
+  $("ah-bags-close").addEventListener("click", closeBags);
   $("ah-open-bnet").addEventListener("click", () => send("openUrl", { url: "https://develop.battle.net/access/clients" }));
   $("ah-save-keys").addEventListener("click", () => {
     const id = $("ah-id").value.trim(), secret = $("ah-secret").value.trim();
@@ -399,6 +471,7 @@
     document.querySelectorAll(".lang button").forEach((b) => b.classList.toggle("on", b.dataset.lang === lang));
     if (st.hasKeys !== undefined) { renderState(); renderRows(); renderDetail(); }
     if (compareOpen && lastCompare) renderCompare(lastCompare);
+    if (bagsOpen) renderBags();
   }
   document.querySelectorAll(".lang button").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.lang)));
   setLang(LS("lontrax.lang"));
@@ -439,6 +512,7 @@
     switch (m.type) {
       case "ahState": st = m; $("ah-save-keys").disabled = false; renderState(); if (!rows.length) renderRows(); break;
       case "ahRows": setRows(m.rows); renderRows(); renderDetail(); break;
+      case "ahBags": bags = m; if (bagsOpen) renderBags(); break;
       case "ahNames":
         try { EN = JSON.parse(m.json); } catch (e) { EN = null; }
         if (st.hasKeys !== undefined) { renderState(); renderRows(); renderDetail(); }

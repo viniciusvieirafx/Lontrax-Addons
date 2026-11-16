@@ -127,6 +127,7 @@
           <select id="ah-house"></select>
         </label>
         <button class="link small" id="ah-which" type="button">Qual é a minha?</button>
+        <button class="btn gold sm" id="ah-bags-open" type="button">🎒 Minha mochila</button>
         <span class="ah-status" id="ah-status"></span>
         <div class="progress ah-progress" id="ah-progress" hidden><div class="bar"></div></div>
         <button class="btn ghost sm" id="ah-refresh" type="button"><span class="i-refresh"></span> Atualizar preços</button>
@@ -179,6 +180,14 @@
           <p class="empty" id="ah-empty" hidden></p>
         </div>
         <aside class="ah-detail" id="ah-detail" hidden></aside>
+      </div>
+    </div>
+
+    <div class="modal" id="ah-bags" hidden>
+      <div class="plaque modal-box wide">
+        <button class="ah-close" id="ah-bags-close" type="button" title="Fechar">×</button>
+        <h3 class="pane-title">O que vale a pena vender?</h3>
+        <div id="ah-bags-body"><p class="waiting"><span class="spinner"></span> Lendo suas bolsas…</p></div>
       </div>
     </div>
 

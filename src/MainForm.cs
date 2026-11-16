@@ -415,6 +415,37 @@ sealed class MainForm : Form
                         SendMarketState(); SendMarketRows();
                         break;
                     }
+                case "ahBags":
+                    {
+                        var files = Bags.Files(settings.AddOnsPath);
+                        var chars = Bags.Read(settings.AddOnsPath);
+                        if (settings.AhHouse is not int bh || market.GetSnapshot(bh) == null)
+                        {
+                            Post(new { type = "ahBags", achou = files.Count > 0, semPrecos = true, personagens = Array.Empty<object>() });
+                            break;
+                        }
+                        var ci = settings.AhCharacterInfo;
+                        Post(new
+                        {
+                            type = "ahBags",
+                            achou = files.Count > 0,
+                            personagens = chars.Select(c =>
+                            {
+                                // Known recipes only count for the same character chosen in the Mercado.
+                                var same = ci != null && ci.nome.StartsWith(c.nome, StringComparison.OrdinalIgnoreCase);
+                                var known = same ? ci!.profissoes.Values.SelectMany(p => p.receitas).ToHashSet() : null;
+                                return new
+                                {
+                                    c.guid, c.nome, c.nivel, c.dinheiro,
+                                    atualizado = c.atualizado?.ToString("dd/MM HH:mm"),
+                                    bancoAtualizado = c.bancoAtualizado?.ToString("dd/MM HH:mm"),
+                                    bolsas = Bags.Advise(market, bh, c.bolsas, known),
+                                    banco = Bags.Advise(market, bh, c.banco, known),
+                                };
+                            }),
+                        });
+                        break;
+                    }
                 case "ahSetOnlyKnown":
                     settings.AhOnlyKnown = (bool?)m!["on"] ?? false;
                     settings.Save();
