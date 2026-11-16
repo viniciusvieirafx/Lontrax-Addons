@@ -703,6 +703,7 @@ sealed class MainForm : Form
             if (!latest.TryGetValue(id, out var c)) { c = await gh.GetLatestCommit(e.Repo, e.Ref); latest[id] = c; }
             Post(new { type = "progress", id, value = 0.02 });
             await Installer.Install(gh, settings.AddOnsPath!, e, c, new SyncProgress(p => Post(new { type = "progress", id, value = p })));
+            if (e.Folders().Any(f => f.Destino == GamePrices.AddonFolder)) { SendPricesToGame(force: true); SendMarketState(); }
             Toast("ok", $"{e.Nome} instalado!" + (WowLocator.WowIsRunning() ? " No jogo, digite /reload." : ""));
         }
         catch (Exception ex)
@@ -814,6 +815,7 @@ sealed class MainForm : Form
             checado = snap?.Fetched.ToLocalTime().ToString("HH:mm"),
             taxa = Market.AhCut,
             soConhecidas = settings.AhOnlyKnown,
+            jogo = GameState(),
             personagem = settings.AhCharacterInfo is not { } ci ? null : new
             {
                 ci.slug,
@@ -829,6 +831,43 @@ sealed class MainForm : Form
                 conhecidas = ci.profissoes.Values.SelectMany(p => p.receitas).Distinct(),
             },
         });
+    }
+
+    /// <summary>Writes the AH prices into AddOns\LontraxMercado\Precos.lua (in-game tooltips) when they are newer
+    /// than what is there, the house changed or <paramref name="force"/>. True when the file was written.</summary>
+    bool SendPricesToGame(bool force = false)
+    {
+        try
+        {
+            if (settings.AhHouse is not int h || market.GetSnapshot(h) is not { } snap) return false;
+            var cur = GamePrices.ReadHeader(settings.AddOnsPath);
+            if (!force && cur != null && cur.House == h && cur.PricesFrom >= snap.LastModified) return false;
+            return GamePrices.Write(settings.AddOnsPath, snap, HouseLabel(h));
+        }
+        catch (Exception ex) { LogError("precos-jogo", ex); return false; }
+    }
+
+    /// <summary>Same name the Mercado shows: "Aliança 1 (casa 110)".</summary>
+    string HouseLabel(int house)
+    {
+        var x = market.Houses.FirstOrDefault(c => c.Id == house);
+        if (x == null) return $"casa {house}";
+        var i = market.Houses.Where(c => c.Faction == x.Faction).ToList().IndexOf(x);
+        return $"{x.Faction} {i + 1} (casa {house})";
+    }
+
+    object GameState()
+    {
+        var installed = GamePrices.AddonInstalled(settings.AddOnsPath);
+        var w = installed ? GamePrices.ReadHeader(settings.AddOnsPath) : null;
+        return new
+        {
+            instalado = installed,
+            enviado = w?.WrittenAt.ToString("dd/MM HH:mm"),
+            precosDe = w?.PricesFrom.ToLocalTime().ToString("dd/MM HH:mm"),
+            mesmaCasa = w != null && settings.AhHouse == w.House,
+            jogoAberto = WowLocator.WowIsRunning(),
+        };
     }
 
     void SendMarketRows()
@@ -849,6 +888,7 @@ sealed class MainForm : Form
         SendMarketRows();
         if (settings.AhHouse is int h && (market.GetSnapshot(h) is not { } s || DateTime.UtcNow - s.Fetched > TimeSpan.FromMinutes(20)))
             await MarketTick(manual: false);
+        else if (SendPricesToGame()) SendMarketState();
         if (market.RecipesStale) await RefreshRecipesQuietly();
     }
 
@@ -881,6 +921,7 @@ sealed class MainForm : Form
             await market.MergeSharedHistory(h);
         });
         if (!ok) return;
+        SendPricesToGame();
         // Character sheet changes only after logout: re-read it now and then, quietly.
         if (settings.AhCharacter is string cs && (settings.AhCharacterInfo == null || manual || DateTime.UtcNow - settings.AhCharacterInfo.lido > TimeSpan.FromMinutes(50)))
         {

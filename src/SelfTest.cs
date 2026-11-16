@@ -128,6 +128,46 @@ static class SelfTest
         catch (Exception ex) { W("FAIL " + ex); return 1; }
     }
 
+    /// <summary>"--selftest-gameprices &lt;log&gt; &lt;AddOns&gt; &lt;house&gt;": writes Precos.lua (prices for the in-game tooltips)
+    /// from the cached prices of a house into a test AddOns folder and checks it. Only reads the price cache.</summary>
+    public static int RunGamePrices(string logPath, string addOns, int house)
+    {
+        var log = new StringBuilder();
+        void W(string s) { log.AppendLine(s); File.WriteAllText(logPath, log.ToString()); }
+        try
+        {
+            var fails = 0;
+            var m = new Market();
+            var snap = m.GetSnapshot(house);
+            if (snap == null) { W("FAIL no cached prices for house " + house); return 1; }
+            W($"house {house}: {snap.Prices.Count} items, prices from {snap.LastModified:u}");
+            var folder = Path.Combine(addOns, GamePrices.AddonFolder);
+            var toc = Path.Combine(folder, GamePrices.AddonFolder + ".toc");
+            // without the addon: must not write anything
+            if (Directory.Exists(folder)) Directory.Delete(folder, true);
+            var wrote = GamePrices.Write(addOns, snap, "Aliança 1 (casa " + house + ")");
+            W("without addon: wrote=" + wrote + (wrote ? "  <-- WRONG" : " (ok)"));
+            if (wrote) fails++;
+            Directory.CreateDirectory(folder);
+            File.WriteAllText(toc, "## Title: test");
+            wrote = GamePrices.Write(addOns, snap, "Aliança 1 (casa " + house + ")");
+            var file = GamePrices.PricesFile(addOns)!;
+            W($"with addon: wrote={wrote} size={new FileInfo(file).Length} bytes");
+            if (!wrote) fails++;
+            var h = GamePrices.ReadHeader(addOns);
+            var headerOk = h != null && h.House == house && h.PricesFrom == snap.LastModified;
+            W($"header: house={h?.House} pricesFrom={h?.PricesFrom:u} writtenAt={h?.WrittenAt:dd/MM HH:mm} ok={headerOk}");
+            if (!headerOk) fails++;
+            var lines = File.ReadAllLines(file).Count(l => l.StartsWith("m["));
+            var expected = snap.Prices.Count(p => p.Value.Min > 0);
+            W($"items in file: {lines} (expected {expected})");
+            if (lines != expected) fails++;
+            W(fails == 0 ? "ALL OK" : $"FAILURES: {fails}");
+            return fails == 0 ? 0 : 1;
+        }
+        catch (Exception ex) { W("FAIL " + ex); return 1; }
+    }
+
     public static async Task<int> Run(string logPath)
     {
         var log = new StringBuilder();

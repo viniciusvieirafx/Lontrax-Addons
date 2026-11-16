@@ -94,10 +94,18 @@
     });
     sel.value = st.casa == null ? "" : String(st.casa);
 
+    // Prices inside the game (tooltips of the Lontrax Mercado addon): installed? sent when?
+    function gameStatus(j) {
+      if (!j || st.casa == null) return "";
+      if (!j.instalado) return ` · <span title="Instale o addon Lontrax Mercado na aba Addons para ver o preço da Casa de Leilões ao passar o mouse nos itens dentro do jogo.">no jogo: instale o <b>Lontrax Mercado</b></span>`;
+      if (!j.enviado) return ` · no jogo: <b>enviando…</b>`;
+      return ` · <span title="O app grava os preços na pasta do Lontrax Mercado. O jogo lê quando você entra no personagem ou digita /reload.">no jogo: preços de <b>${esc(j.precosDe)}</b>${j.jogoAberto ? " (dê <b>/reload</b> para ver)" : ""}</span>`;
+    }
     const fonte = st.chavePropria ? "sua chave" : "preços da galera";
     $("ah-status").innerHTML = (st.atualizado
       ? `Preços de <b>${esc(st.atualizado)}</b> · ${fonte}`
       : st.casa == null ? "Escolha a sua Casa de Leilões." : "") +
+      gameStatus(st.jogo) +
       ` · <button class="link small" id="ah-key-toggle" type="button">${st.chavePropria ? "usar preços da galera" : "usar minha chave"}</button>`;
     $("ah-key-toggle").addEventListener("click", () => {
       if (st.chavePropria) { if (confirm("Parar de usar a sua chave da Blizzard e usar os preços da galera?")) send("ahForgetKeys"); }
