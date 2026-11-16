@@ -91,6 +91,20 @@
         "Interface"
       ],
       "obrigatorio": false
+    },
+    {
+      "id": "lontraxmercado",
+      "nome": "Lontrax Mercado - Mochila",
+      "descricao": "Anota o que tem nas suas bolsas e no banco para a aba Mercado do app dizer o que vale a pena vender na Casa de Leilões. Só lê: não vende nem compra nada.",
+      "repo": "viniciusvieirafx/LontraxMercado",
+      "ref": "main",
+      "pasta": "LontraxMercado",
+      "autor": "Lontrax",
+      "tags": [
+        "Casa de Leilões",
+        "Interface"
+      ],
+      "obrigatorio": false
     }
   ]
 }
