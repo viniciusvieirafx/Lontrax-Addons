@@ -417,6 +417,7 @@ sealed class MainForm : Form
                     }
                 case "ahBags":
                     {
+                        ImportGameScan();
                         var files = Bags.Files(settings.AddOnsPath);
                         var chars = Bags.Read(settings.AddOnsPath);
                         if (settings.AhHouse is not int bh || market.GetSnapshot(bh) == null)
@@ -816,6 +817,7 @@ sealed class MainForm : Form
             taxa = Market.AhCut,
             soConhecidas = settings.AhOnlyKnown,
             jogo = GameState(),
+            doJogo = snap?.Origem == "jogo",
             personagem = settings.AhCharacterInfo is not { } ci ? null : new
             {
                 ci.slug,
@@ -845,6 +847,23 @@ sealed class MainForm : Form
             return GamePrices.Write(settings.AddOnsPath, snap, HouseLabel(h));
         }
         catch (Exception ex) { LogError("precos-jogo", ex); return false; }
+    }
+
+    /// <summary>The in-game "Escanear tudo" result (saved by the game on /reload or logout) becomes the prices of the
+    /// chosen house when it is newer. True when it was used.</summary>
+    bool ImportGameScan()
+    {
+        try
+        {
+            if (settings.AhHouse is not int h || Bags.ReadScan(settings.AddOnsPath) is not { } scan) return false;
+            if (!market.ApplyGameScan(h, scan.When, scan.Prices)) return false;
+            SendPricesToGame();
+            SendMarketState();
+            SendMarketRows();
+            Post(new { type = "ahInfo", text = $"Usei o seu escaneamento do jogo ({scan.When.ToLocalTime():dd/MM HH:mm}, {scan.Prices.Count} itens) para os preços." });
+            return true;
+        }
+        catch (Exception ex) { LogError("escaneamento", ex); return false; }
     }
 
     /// <summary>Same name the Mercado shows: "Aliança 1 (casa 110)".</summary>
@@ -886,6 +905,7 @@ sealed class MainForm : Form
         });
         SendMarketState();
         SendMarketRows();
+        ImportGameScan();
         if (settings.AhHouse is int h && (market.GetSnapshot(h) is not { } s || DateTime.UtcNow - s.Fetched > TimeSpan.FromMinutes(20)))
             await MarketTick(manual: false);
         else if (SendPricesToGame()) SendMarketState();
@@ -913,6 +933,7 @@ sealed class MainForm : Form
     async Task MarketTick(bool manual)
     {
         if (!market.CanFetch || settings.AhHouse is not int h) { if (manual) SendMarketState(); return; }
+        ImportGameScan();
         var fresh = false;
         var ok = await RunMarket("precos", async () =>
         {

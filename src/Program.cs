@@ -11,6 +11,8 @@ static class Program
             return SelfTest.RunMarket(args[1], args[2], int.Parse(args[3])).GetAwaiter().GetResult();
         if (args.Length >= 4 && args[0] == "--selftest-bags")
             return SelfTest.RunBags(args[1], args[2], int.Parse(args[3])).GetAwaiter().GetResult();
+        if (args.Length >= 4 && args[0] == "--selftest-gamescan")
+            return SelfTest.RunGameScan(args[1], args[2], int.Parse(args[3]));
         if (args.Length >= 4 && args[0] == "--selftest-gameprices")
             return SelfTest.RunGamePrices(args[1], args[2], int.Parse(args[3]));
         if (args.Length >= 2 && args[0] == "--selftest-update")

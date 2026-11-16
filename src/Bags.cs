@@ -79,6 +79,54 @@ static class Bags
         return chars.OrderByDescending(c => c.atualizado ?? DateTime.MinValue).ToList();
     }
 
+    /// <summary>Full scan made in game with the "Escanear tudo" button of Lontrax Mercado (1.3.0+).</summary>
+    public sealed record GameScan(DateTimeOffset When, string Realm, int Listings, Dictionary<int, Price> Prices);
+
+    static readonly Regex ScanBlock = new(@"\[""scan""\]\s*=\s*\{([^{}]*)\}", RegexOptions.Compiled);
+
+    /// <summary>The newest in-game scan among all WoW accounts (null = none). The game writes it on /reload or logout.</summary>
+    public static GameScan? ReadScan(string? addOnsPath)
+    {
+        GameScan? best = null;
+        foreach (var file in Files(addOnsPath))
+        {
+            string text;
+            try { text = File.ReadAllText(file, Encoding.UTF8); } catch { continue; }
+            var b = ScanBlock.Match(text);
+            if (!b.Success) continue;
+            long hora = 0; var listings = 0; string realm = "", dados = "";
+            foreach (Match f in Field.Matches(b.Groups[1].Value))
+            {
+                var raw = f.Groups[2].Value;
+                var str = raw.StartsWith('"') ? LuaString(raw) : null;
+                long.TryParse(raw.Split('.')[0], out var num);
+                switch (f.Groups[1].Value)
+                {
+                    case "hora": hora = num; break;
+                    case "anuncios": listings = (int)num; break;
+                    case "reino": realm = str ?? ""; break;
+                    case "dados": dados = str ?? ""; break;
+                }
+            }
+            if (hora <= 0 || dados.Length == 0) continue;
+            var when = DateTimeOffset.FromUnixTimeSeconds(hora);
+            if (best != null && best.When >= when) continue;
+            var prices = new Dictionary<int, Price>();
+            foreach (var part in dados.Split('~'))
+            {
+                // id:menorPreçoPorUnidade:quantidade:anúncios
+                var x = part.Split(':');
+                if (x.Length < 3 || !int.TryParse(x[0], out var id) || !long.TryParse(x[1], out var min) || min <= 0) continue;
+                int.TryParse(x[2], out var qty);
+                var n = 0;
+                if (x.Length > 3) int.TryParse(x[3], out n);
+                prices[id] = new Price { Min = min, Market = min, Qty = qty, Listings = n };
+            }
+            if (prices.Count > 0) best = new GameScan(when, realm, listings, prices);
+        }
+        return best;
+    }
+
     /// <summary>"id^qtd^npc^vinc^nome~id^..." (format written by the addon).</summary>
     static List<Item> Items(string? s)
     {

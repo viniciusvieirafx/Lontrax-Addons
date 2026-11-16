@@ -139,6 +139,8 @@ sealed class Snapshot
     public DateTimeOffset LastModified { get; set; }
     public DateTime Fetched { get; set; }
     public Dictionary<int, Price> Prices { get; set; } = new();
+    /// <summary>"jogo" when the prices came from the in-game "Escanear tudo" button; null = Blizzard.</summary>
+    public string? Origem { get; set; }
 }
 
 sealed class HouseInfo
@@ -425,6 +427,19 @@ sealed class Market
         snaps[house] = snap;
         File.WriteAllText(Path.Combine(Dir, $"casa-{house}.json"), JsonSerializer.Serialize(snap, Json));
         if (keepHistory) AddHistory(house, snap);
+        return true;
+    }
+
+    /// <summary>Prices from the in-game scan (Lontrax Mercado "Escanear tudo") become the house prices when they
+    /// are newer than what the app has. Blizzard data replaces them again once Blizzard has a newer dump.</summary>
+    public bool ApplyGameScan(int house, DateTimeOffset when, Dictionary<int, Price> prices)
+    {
+        var old = GetSnapshot(house);
+        if (prices.Count == 0 || (old != null && old.LastModified >= when)) return false;
+        var snap = new Snapshot { House = house, LastModified = when, Fetched = DateTime.UtcNow, Prices = prices, Origem = "jogo" };
+        snaps[house] = snap;
+        File.WriteAllText(Path.Combine(Dir, $"casa-{house}.json"), JsonSerializer.Serialize(snap, Json));
+        AddHistory(house, snap);
         return true;
     }
 

@@ -130,6 +130,38 @@ static class SelfTest
 
     /// <summary>"--selftest-gameprices &lt;log&gt; &lt;AddOns&gt; &lt;house&gt;": writes Precos.lua (prices for the in-game tooltips)
     /// from the cached prices of a house into a test AddOns folder and checks it. Only reads the price cache.</summary>
+    /// <summary>"--selftest-gamescan &lt;log&gt; &lt;AddOns&gt; &lt;house&gt;": reads the in-game scan from the test WoW folder's
+    /// SavedVariables and applies it as the house prices. Use LONTRAX_DATA (it writes the price cache).</summary>
+    public static int RunGameScan(string logPath, string addOns, int house)
+    {
+        var log = new StringBuilder();
+        void W(string s) { log.AppendLine(s); File.WriteAllText(logPath, log.ToString()); }
+        try
+        {
+            if (Environment.GetEnvironmentVariable("LONTRAX_DATA") == null) { W("FAIL set LONTRAX_DATA"); return 1; }
+            var fails = 0;
+            var scan = Bags.ReadScan(addOns);
+            W(scan == null ? "scan: none  <-- WRONG" : $"scan: {scan.When:u} realm={scan.Realm} listings={scan.Listings} items={scan.Prices.Count}");
+            if (scan == null) return 1;
+            foreach (var id in scan.Prices.Keys.OrderBy(k => k).Take(5))
+                W($"  item {id}: min={scan.Prices[id].Min} qty={scan.Prices[id].Qty} listings={scan.Prices[id].Listings}");
+            var m = new Market();
+            var used = m.ApplyGameScan(house, scan.When, scan.Prices);
+            var snap = m.GetSnapshot(house);
+            W($"applied={used} origem={snap?.Origem} items={snap?.Prices.Count}");
+            if (!used || snap?.Origem != "jogo") fails++;
+            var again = m.ApplyGameScan(house, scan.When.AddMinutes(-5), scan.Prices);
+            W("older scan applied=" + again + (again ? "  <-- WRONG" : " (ok)"));
+            if (again) fails++;
+            var reread = new Market().GetSnapshot(house);
+            W($"saved to cache: origem={reread?.Origem} lm={reread?.LastModified:u}");
+            if (reread?.Origem != "jogo") fails++;
+            W(fails == 0 ? "ALL OK" : $"FAILURES: {fails}");
+            return fails == 0 ? 0 : 1;
+        }
+        catch (Exception ex) { W("FAIL " + ex); return 1; }
+    }
+
     public static int RunGamePrices(string logPath, string addOns, int house)
     {
         var log = new StringBuilder();
