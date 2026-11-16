@@ -175,6 +175,13 @@
 .bags-sum { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 10px; }
 .bags-sum div { padding: 8px 12px; border-radius: 10px; background: rgba(8,17,41,.75); border: 1px solid rgba(217,180,90,.3); font-size: 13px; color: var(--muted); }
 .bags-sum b { display: block; font-size: 17px; color: var(--text); margin-top: 2px; }
+/* "Único" items: red tag + red bar on the left, so nobody sells one by mistake */
+.unique-tag { margin-left: 6px; padding: 1px 6px; border-radius: 4px; font: 700 10px var(--serif); letter-spacing: .08em;
+  color: #fff; background: #b3261e; border: 1px solid #ff8a80; box-shadow: 0 0 8px rgba(239,122,108,.45); vertical-align: 1px; }
+.bags-table tr.is-unique td { background: rgba(179,38,30,.12); }
+.bags-table tr.is-unique td:first-child { box-shadow: inset 3px 0 0 #e5534b; }
+/* item name in the game's quality colors */
+.q0 { color: #9d9d9d; } .q2 { color: #1eff00; } .q3 { color: #4a9cff; } .q4 { color: #c477ff; } .q5 { color: #ff8000; }
 .bags-filters { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 0 0 10px; }
 .chips-inline { display: inline-flex; gap: 6px; flex-wrap: wrap; }
 .bags-table th[data-sort] { cursor: pointer; }

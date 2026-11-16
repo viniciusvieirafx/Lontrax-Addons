@@ -472,7 +472,8 @@
           : a.vinculado ? '<span class="flat">vinculado: só NPC</span>'
           : a.onde === "sem" ? '<span class="flat">ninguém vendendo: você escolhe o preço</span>'
           : a.onde === "ah" && a.aVenda > 200 ? '<span class="flat">muita gente vendendo: venda um pouco abaixo</span>' : "";
-        h += `<tr><td>${esc(nome)}</td><td class="num">${a.qtd}</td><td><span class="where ${a.onde}">${WHERE[a.onde] || a.onde}</span></td>
+        const uni = a.unico ? ' <span class="unique-tag" title="Item Único: confira antes de vender">ÚNICO</span>' : "";
+        h += `<tr class="${a.unico ? "is-unique" : ""}"><td><span class="q${a.qualidade}">${esc(nome)}</span>${uni}</td><td class="num">${a.qtd}</td><td><span class="where ${a.onde}">${WHERE[a.onde] || a.onde}</span></td>
           <td class="num">${money(a.ganho)}</td><td class="num">${a.ahUnidade == null ? "—" : money(a.ahUnidade)}</td>
           <td class="num">${a.npcUnidade ? money(a.npcUnidade) : "—"}</td><td class="num">${a.ahUnidade == null ? "—" : a.aVenda}</td><td>${dica}</td></tr>`;
       });

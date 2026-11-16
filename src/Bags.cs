@@ -7,7 +7,7 @@ namespace LontraxAddons;
 /// and says, per item, whether it is worth selling on the AH, to an NPC, or keeping for a craft.</summary>
 static class Bags
 {
-    public sealed record Item(int id, int qtd, long npc, bool vinc, string nome);
+    public sealed record Item(int id, int qtd, long npc, bool vinc, string nome, bool unico = false, int qualidade = -1);
 
     public sealed class Character
     {
@@ -89,7 +89,10 @@ static class Bags
             var f = part.Split('^');
             if (f.Length < 4 || !int.TryParse(f[0], out var id) || !int.TryParse(f[1], out var qtd)) continue;
             long.TryParse(f[2], out var npc);
-            list.Add(new Item(id, qtd, npc, f[3] == "1", f.Length > 4 ? f[4] : ""));
+            // Fields 6 and 7 (unique, quality) exist since addon 1.1.0; older saves simply lack them.
+            var q = -1;
+            if (f.Length > 6) int.TryParse(f[6], out q);
+            list.Add(new Item(id, qtd, npc, f[3] == "1", f.Length > 4 ? f[4] : "", f.Length > 5 && f[5] == "1", q));
         }
         return list;
     }
@@ -126,7 +129,7 @@ static class Bags
 
     // ---------- advice ----------
     public sealed record Advice(int id, string nome, int qtd, string onde, long? ahUnidade, long npcUnidade, long ganho,
-        int aVenda, bool vinculado, string? craft, int? craftItem, long? craftLucro, bool craftConhecida);
+        int aVenda, bool vinculado, string? craft, int? craftItem, long? craftLucro, bool craftConhecida, bool unico, int qualidade);
 
     /// <summary>Per item: AH (already minus the 5% cut) vs NPC, plus "keep it: it's a reagent of a profitable craft".</summary>
     public static List<Advice> Advise(Market market, int house, IEnumerable<Item> items, HashSet<int>? known)
@@ -161,7 +164,7 @@ static class Bags
             else { onde = it.npc > 0 ? "npc" : "ah"; ganho = Math.Max(net, it.npc) * qtd; }
             craftByReagent.TryGetValue(it.id, out var craft);
             list.Add(new Advice(it.id, it.nome, qtd, onde, ahUnit, it.npc, ganho, p?.Qty ?? 0, it.vinc,
-                craft.nome, craft.nome == null ? null : craft.item, craft.nome == null ? null : craft.lucro, craft.conhecida));
+                craft.nome, craft.nome == null ? null : craft.item, craft.nome == null ? null : craft.lucro, craft.conhecida, g.Any(x => x.unico), g.Max(x => x.qualidade)));
         }
         return list.OrderByDescending(a => a.ganho).ToList();
     }
