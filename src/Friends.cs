@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace LontraxAddons;
 
-/// <summary>Friends tab: reads what the in-game addon "Lontrax Amigos" saved
+/// <summary>Friends tab: reads what the in-game addon Lontrax Mercado (its Amigos.lua, 1.4.0+) saved
 /// (WTF\Account\*\SavedVariables\LontraxAmigos.lua), keeps a level history per friend and, with an own
 /// Blizzard key, adds guild / item level / last login from the Forever character API.
 /// The character picture needs no key: render.worldofwarcraft.com is public and the character id is the
@@ -86,8 +86,14 @@ sealed class Friends
         return list;
     }
 
-    public static bool AddonInstalled(string? addOnsPath) =>
-        !string.IsNullOrEmpty(addOnsPath) && File.Exists(Path.Combine(addOnsPath, "LontraxAmigos", "LontraxAmigos.toc"));
+    /// <summary>"sem" = Lontrax Mercado not installed, "velho" = installed but before 1.4.0 (no friends list), "ok".</summary>
+    public static string AddonState(string? addOnsPath)
+    {
+        if (string.IsNullOrEmpty(addOnsPath)) return "sem";
+        var dir = Path.Combine(addOnsPath, "LontraxMercado");
+        if (!File.Exists(Path.Combine(dir, "LontraxMercado.toc"))) return "sem";
+        return File.Exists(Path.Combine(dir, "Amigos.lua")) ? "ok" : "velho";
+    }
 
     /// <summary>"Miranajanela Lontrax" → "miranajanela-lontrax" (how the Forever API names characters).</summary>
     public static string Slug(string nome, string? sobrenome) =>

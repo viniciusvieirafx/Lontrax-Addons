@@ -94,11 +94,13 @@
     const grid = $("fr-grid"), empty = $("fr-empty"), sum = $("fr-summary");
     const max = data.maxNivel || 60;
     let list = (data.lista || []).slice();
-    if (!data.addon) {
+    if (data.addon !== "ok" && !data.achou) {
       grid.innerHTML = "";
       sum.textContent = "Amigos";
       empty.hidden = false;
-      empty.innerHTML = `<b>Falta o addon Lontrax Amigos.</b><br>Instale ele na aba <b>Addons</b> (é pequenininho), depois feche e abra o jogo.<br>Ele guarda a sua lista de amigos para aparecer aqui.`;
+      empty.innerHTML = data.addon === "velho"
+        ? `<b>Atualize o Lontrax Mercado.</b><br>Na aba <b>Addons</b>, clique em Atualizar no <b>Lontrax Mercado</b>, depois feche e abra o jogo.<br>A versão nova guarda a sua lista de amigos para aparecer aqui.`
+        : `<b>Falta o addon Lontrax Mercado.</b><br>Instale ele na aba <b>Addons</b>, depois feche e abra o jogo.<br>É ele que guarda a sua lista de amigos para aparecer aqui.`;
       return;
     }
     if (!data.achou) {
@@ -173,7 +175,7 @@
   // Prévia no navegador (sem o app): dados de exemplo
   if (!host) {
     data = {
-      addon: true, achou: true, maxNivel: 60, atualizado: "17/11 21:40",
+      addon: "ok", achou: true, maxNivel: 60, atualizado: "17/11 21:40",
       lista: [
         { nome: "Miranajanela", sobrenome: "Lontrax", nivel: 33, classe: "Ladino", classeEn: "ROGUE", raca: "Elfo Noturno", area: "Floresta do Elwynn", online: true, ganhou7: 3, ganhou30: 8, guilda: "Made in Brazil", ilvl: 28, boneco: "https://render.worldofwarcraft.com/forever-us/character/219/5136859-main-raw.png", historico: [[20400, 25], [20402, 27], [20405, 30], [20407, 33]] },
         { nome: "Thorgrim", sobrenome: "Pedrabarba", nivel: 60, classe: "Guerreiro", classeEn: "WARRIOR", raca: "Anão", online: false, visto: Date.now() / 1000 - 86400 * 2, ganhou7: 0, ganhou30: 2, historico: [] },

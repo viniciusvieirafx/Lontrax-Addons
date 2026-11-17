@@ -788,7 +788,7 @@ sealed class MainForm : Form
                 type = "amigos",
                 lista = list,
                 achou = found,
-                addon = Friends.AddonInstalled(settings.AddOnsPath),
+                addon = Friends.AddonState(settings.AddOnsPath),
                 atualizado = updated?.ToString("dd/MM HH:mm"),
                 maxNivel = Friends.MaxLevel,
                 chave = market.Api.HasKeys,
