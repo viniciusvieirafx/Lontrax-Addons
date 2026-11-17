@@ -356,6 +356,9 @@ sealed class MainForm : Form
                 case "openUrl": OpenUrl((string?)m!["url"]); break;
                 case "copy": SafeCopy((string?)m!["text"] ?? ""); break;
 
+                // ---------- Amigos ----------
+                case "amigos": await SendFriends(refreshApi: true); break;
+
                 // ---------- Mercado ----------
                 case "ahInit":
                     // English names for the PT | EN toggle (sent as raw JSON, parsed by the page).
@@ -772,6 +775,29 @@ sealed class MainForm : Form
 
     // ---------- Mercado: auction house prices and craft profit ----------
     readonly Market market = new();
+    readonly Friends friends = new();
+
+    /// <summary>Friends tab: what Lontrax Amigos saved in the game, plus API extras with an own key.</summary>
+    async Task SendFriends(bool refreshApi)
+    {
+        try
+        {
+            var (list, found, updated) = friends.Read(settings.AddOnsPath);
+            Post(new
+            {
+                type = "amigos",
+                lista = list,
+                achou = found,
+                addon = Friends.AddonInstalled(settings.AddOnsPath),
+                atualizado = updated?.ToString("dd/MM HH:mm"),
+                maxNivel = Friends.MaxLevel,
+                chave = market.Api.HasKeys,
+            });
+            if (refreshApi && list.Count > 0 && await friends.RefreshApi(market.Api, list.Select(f => f.slug)))
+                await SendFriends(refreshApi: false);
+        }
+        catch (Exception ex) { LogError("amigos", ex); }
+    }
     readonly System.Windows.Forms.Timer marketTimer = new() { Interval = 15 * 60 * 1000 };
     bool marketBusy;
 

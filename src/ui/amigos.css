@@ -1,0 +1,82 @@
+/* ===================== Amigos ===================== */
+#tab-amigos { overflow: auto; padding: 18px 28px 28px; }
+.fr-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.fr-summary { font: 600 15px/1.4 var(--sans); color: var(--text); }
+.fr-summary b { color: var(--gold-hi); }
+.fr-when { display: block; font-size: 12px; color: var(--muted); font-weight: 500; }
+.fr-tools { display: flex; gap: 10px; align-items: center; }
+.fr-sort {
+  background: rgba(8,17,41,.75); color: var(--text); border: 1px solid rgba(217,180,90,.45); border-radius: 8px;
+  padding: 6px 10px; font: 600 13px var(--sans);
+}
+.fr-empty, .fr-none {
+  margin: 30px auto; max-width: 520px; text-align: center; padding: 22px 26px; line-height: 1.6;
+  font: 500 15px/1.6 var(--sans); color: var(--text);
+  background: rgba(13,27,63,.7); border: 1px solid rgba(217,180,90,.35); border-radius: var(--radius);
+}
+.fr-empty b { color: var(--gold-hi); }
+.fr-empty code { color: var(--gold-hi); }
+.fr-none { grid-column: 1 / -1; }
+
+.fr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.fr-card {
+  position: relative; display: flex; flex-direction: column; overflow: hidden;
+  background: linear-gradient(180deg, rgba(20,42,94,.75), rgba(8,17,41,.92));
+  border: 1px solid rgba(217,180,90,.35); border-top: 3px solid var(--cls); border-radius: var(--radius);
+  box-shadow: 0 8px 22px rgba(0,0,0,.35);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.fr-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(0,0,0,.5), 0 0 0 1px var(--cls); }
+
+/* boneco: a imagem da Blizzard é 1600x1200 com o personagem no meio */
+.fr-pic {
+  position: relative; aspect-ratio: 4 / 5; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 70%, color-mix(in srgb, var(--cls) 30%, transparent), transparent 70%), #050a18;
+}
+.fr-boneco {
+  position: absolute; left: 50%; top: -24%; height: 152%; width: auto; transform: translateX(-50%);
+  opacity: 0; transition: opacity .4s ease, transform .5s ease;
+  filter: drop-shadow(0 10px 12px rgba(0,0,0,.6));
+}
+.fr-pic.has-pic .fr-boneco { opacity: 1; }
+.fr-card:hover .fr-boneco { transform: translateX(-50%) scale(1.04); }
+.fr-initial {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font: 700 72px var(--deco); color: var(--cls); opacity: .55; text-shadow: 0 4px 18px rgba(0,0,0,.7);
+}
+.fr-pic.has-pic .fr-initial { display: none; }
+.fr-pic::after {
+  content: ""; position: absolute; inset: auto 0 0 0; height: 30%; pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(8,17,41,.95));
+}
+.fr-lvl {
+  position: absolute; z-index: 2; top: 10px; left: 10px; min-width: 40px; height: 40px; padding: 0 8px;
+  display: grid; place-items: center; border-radius: 50%;
+  font: 800 18px var(--serif); color: #2a1d05;
+  background: radial-gradient(circle at 35% 30%, var(--gold-hi), var(--gold) 60%, var(--gold-lo));
+  border: 2px solid #1a120c; box-shadow: 0 3px 8px rgba(0,0,0,.6);
+}
+.fr-badges { position: absolute; z-index: 2; left: 10px; right: 10px; bottom: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+.fr-badge {
+  font: 700 11px/1 var(--sans); padding: 5px 8px; border-radius: 999px;
+  background: rgba(8,17,41,.85); color: var(--text); border: 1px solid rgba(217,180,90,.45);
+}
+.fr-badge.up { color: #0b2a12; background: var(--ok); border-color: #2b7a3a; }
+.fr-badge.up.soft { color: var(--ok); background: rgba(8,17,41,.85); border-color: rgba(127,209,139,.5); }
+.fr-badge.max { color: #2a1d05; background: linear-gradient(180deg, var(--gold-hi), var(--gold)); border-color: var(--gold-lo); }
+.fr-badge.bnet { color: #9fd3ff; border-color: rgba(80,160,255,.5); }
+
+.fr-body { padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 6px; }
+.fr-name { margin: 0; font: 700 17px/1.2 var(--serif); color: var(--gold-hi); }
+.fr-name span { font-size: 13px; color: var(--parch-lo); font-weight: 600; }
+.fr-class { font: 600 13px var(--sans); color: var(--cls); }
+.fr-extra { font: 500 12px var(--sans); color: var(--muted); }
+.fr-bar { height: 7px; border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden; border: 1px solid rgba(0,0,0,.4); }
+.fr-bar > div { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--gold-lo), var(--gold-hi)); box-shadow: 0 0 8px rgba(244,220,152,.4); }
+.fr-status { font: 500 12px/1.3 var(--sans); color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.fr-dot { width: 8px; height: 8px; border-radius: 50%; background: #5b6476; flex: none; }
+.fr-dot.on { background: var(--ok); box-shadow: 0 0 0 0 rgba(127,209,139,.6); animation: frPulse 1.8s ease-out infinite; }
+@keyframes frPulse { 0% { box-shadow: 0 0 0 0 rgba(127,209,139,.6); } 100% { box-shadow: 0 0 0 8px rgba(127,209,139,0); } }
+.fr-spark { width: 100%; height: 26px; }
+.fr-spark path { fill: none; stroke: var(--gold); stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+.fr-note { font: italic 500 12px var(--sans); color: var(--parch-lo); }

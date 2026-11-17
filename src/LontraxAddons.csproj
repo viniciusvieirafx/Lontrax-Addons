@@ -35,6 +35,8 @@
     <EmbeddedResource Include="ui\app.js" LogicalName="ui.app.js" />
     <EmbeddedResource Include="ui\market.css" LogicalName="ui.market.css" />
     <EmbeddedResource Include="ui\market.js" LogicalName="ui.market.js" />
+    <EmbeddedResource Include="ui\amigos.css" LogicalName="ui.amigos.css" />
+    <EmbeddedResource Include="ui\amigos.js" LogicalName="ui.amigos.js" />
     <!-- Mercado: recipes + house list, so the tab opens at once (refreshed from Blizzard weekly) -->
     <EmbeddedResource Include="data\receitas.json" LogicalName="data.receitas.json" />
     <EmbeddedResource Include="data\casas.json" LogicalName="data.casas.json" />

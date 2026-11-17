@@ -66,8 +66,8 @@
   // ---------- tabs ----------
   function showTab(name) {
     document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
-    $("tab-addons").hidden = name !== "addons";
-    $("tab-mercado").hidden = name !== "mercado";
+    document.querySelectorAll(".tab-pane").forEach((p) => (p.hidden = p.id !== "tab-" + name));
+    document.dispatchEvent(new CustomEvent("lontrax-tab", { detail: name }));
     LS("lontrax.tab", name);
     if (name === "mercado" && !started) { started = true; send("ahInit"); }
   }
@@ -597,7 +597,7 @@
   });
 
   // Remember the last tab (Mercado opens straight away if you were there).
-  showTab(LS("lontrax.tab") === "mercado" ? "mercado" : "addons");
+  showTab(["mercado", "amigos"].includes(LS("lontrax.tab")) ? LS("lontrax.tab") : "addons");
 
   // ---------- preview in a normal browser (no app host): sample data ----------
   if (!host) {

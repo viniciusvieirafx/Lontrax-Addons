@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@500;600;700&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="app.css">
 <link rel="stylesheet" href="market.css">
+<link rel="stylesheet" href="amigos.css">
 </head>
 <body>
 <div class="sky" aria-hidden="true"></div>
@@ -87,7 +88,30 @@
   <nav class="tabs" role="tablist">
     <button class="tab-btn active" data-tab="addons" role="tab">Addons</button>
     <button class="tab-btn" data-tab="mercado" role="tab">Mercado <span class="tab-sub">Casa de Leilões</span></button>
+    <button class="tab-btn" data-tab="amigos" role="tab">Amigos <span class="tab-sub">quem está upando</span></button>
   </nav>
+
+  <!-- ===================== Amigos ===================== -->
+  <div class="tab-pane" id="tab-amigos" hidden>
+    <div class="fr-top">
+      <div class="fr-summary" id="fr-summary">Lendo a sua lista de amigos…</div>
+      <div class="fr-tools">
+        <div class="tabs-mini" id="fr-filter">
+          <button data-f="todos" class="on" type="button">Todos</button>
+          <button data-f="online" type="button">Online</button>
+          <button data-f="upando" type="button">Upando</button>
+        </div>
+        <select id="fr-sort" class="fr-sort" aria-label="Ordenar">
+          <option value="nivel">Maior nível</option>
+          <option value="upou">Quem mais upou (7 dias)</option>
+          <option value="online">Online primeiro</option>
+          <option value="nome">Nome</option>
+        </select>
+      </div>
+    </div>
+    <div class="fr-empty" id="fr-empty" hidden></div>
+    <div class="fr-grid" id="fr-grid"></div>
+  </div>
 
   <!-- ===================== Mercado ===================== -->
   <div class="tab-pane" id="tab-mercado" hidden>
@@ -264,5 +288,6 @@
 
 <script src="app.js"></script>
 <script src="market.js"></script>
+<script src="amigos.js"></script>
 </body>
 </html>
