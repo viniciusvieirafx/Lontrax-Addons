@@ -232,6 +232,7 @@
           setBusy(false);
           break;
         case "progress": {
+          if (fight.on) endFight();
           if (!(finishedAt[m.id] && Date.now() - finishedAt[m.id] < 5000 && m.value > 0.05)) setMascot("trabalhando", "Instalando… martelando aqui!");
           // A late report after the install finished must not bring back "Instalando…".
           if (finishedAt[m.id] && Date.now() - finishedAt[m.id] < 5000 && m.value > 0.05) break;
@@ -317,8 +318,126 @@
     renderItems();
   }
 
+  // ---------- Lontrinha vs murloc ----------
+  // Now and then a murloc walks along the top bar toward the otter, she draws her sword and
+  // sends it away in a puff of smoke. Also: click the otter 5 times quickly to call one.
+  // Never while installing, while the window is in the background or with reduced motion.
+  const fight = { on: false, timers: [], clicks: [] };
+  const MURLOC_SAYS = ["Mrrglglglgl!", "Mrgle? Mrgle!", "Aaaughibbrgubugbugrguburgle!", "Mrglmrgl!"];
+  const WIN_SAYS = ["Nenhum murloc passa por aqui!", "Volta pro lago, peixão!", "Pela Aliança! Mais um!", "Esse não rouba mais addon."];
+  function murlocCount(add) {
+    let n = 0;
+    try { n = parseInt(localStorage.getItem("lontrax.murlocs") || "0", 10) || 0; } catch (e) {}
+    if (add) { n += add; try { localStorage.setItem("lontrax.murlocs", String(n)); } catch (e) {} }
+    return n;
+  }
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  function later(fn, ms) { fight.timers.push(setTimeout(fn, ms)); }
+  function canFight(force) {
+    if (fight.on || document.hidden || document.body.classList.contains("paused")) return false;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+    if ($("mascot").hidden || (!force && Date.now() < celebrateUntil)) return false;
+    const sp = $("mascot-sprite");
+    return !sp.classList.contains("trabalhando") && !document.querySelector(".card .progress:not([hidden])");
+  }
+  function endFight() {
+    fight.timers.forEach(clearTimeout);
+    fight.timers = [];
+    const m = $("murloc");
+    m.hidden = true;
+    m.className = "murloc";
+    m.onclick = null;
+    document.querySelectorAll(".dmg").forEach((d) => d.remove());
+    if (fight.on) { fight.on = false; $("mascot-sprite").classList.remove("lutando"); }
+  }
+  function damage(x, y, text, crit) {
+    const d = document.createElement("div");
+    d.className = "dmg" + (crit ? " crit" : "");
+    d.textContent = text;
+    d.style.left = x + "px";
+    d.style.top = y + "px";
+    document.body.appendChild(d);
+    setTimeout(() => d.remove(), 950);
+  }
+  function startFight(force) {
+    if (!canFight(force)) return false;
+    fight.on = true;
+    celebrateUntil = Date.now() + 60000; // keep the automatic messages away during the fight
+    const sp = $("mascot-sprite");
+    setMascot("avisando", null);
+    const r = sp.getBoundingClientRect();
+    const m = $("murloc");
+    const say = m.querySelector(".murloc-say");
+    const endX = Math.round(r.left - 24 - 84 + 22); // right next to the sword tip
+    const startX = Math.max(-90, endX - 360);
+    m.className = "murloc";
+    m.style.transition = "none";
+    m.style.left = startX + "px";
+    m.style.top = Math.round(r.top) + "px";
+    m.hidden = false;
+    void m.offsetWidth;
+    m.style.transition = "";
+    m.style.left = endX + "px";
+    say.textContent = pick(MURLOC_SAYS);
+    say.hidden = false;
+    later(() => (say.hidden = true), 1800);
+
+    let hits = 0;
+    let done = false;
+    const hitOnce = () => {
+      if (done) return;
+      hits++;
+      const crit = hits >= 3 || Math.random() < 0.15;
+      m.classList.remove("hit");
+      void m.offsetWidth;
+      m.classList.add("hit");
+      const mr = m.getBoundingClientRect();
+      damage(mr.left + 42 + (Math.random() * 20 - 10), mr.top + 10, crit ? "CRÍTICO! -" + (90 + Math.floor(Math.random() * 60)) : "-" + (12 + Math.floor(Math.random() * 30)), crit);
+      if (crit) win();
+    };
+    const win = () => {
+      if (done) return;
+      done = true;
+      later(() => {
+        m.className = "murloc poof";
+        m.onclick = null;
+        sp.classList.remove("lutando");
+        const n = murlocCount(1);
+        celebrateUntil = Date.now() + 4000;
+        setMascot("comemorando", null);
+        // the bubble waits for the smoke to clear (it opens right where the murloc was)
+        later(() => setMascot("comemorando", pick(WIN_SAYS) + (n > 1 ? ` (${n} murlocs derrotados)` : " (o primeiro!)"), 3200), 750);
+      }, 260);
+      later(() => { endFight(); lastAuto = ""; mascotAuto(); }, 4300);
+    };
+    // A click on the murloc lands a hit right away.
+    m.onclick = () => { if (fight.on && sp.classList.contains("lutando")) hitOnce(); };
+    // It arrives (3.4 s), the otter draws her sword and swings until a critical hit.
+    later(() => {
+      m.classList.add("stop");
+      setMascot("lutando", null);
+      for (let i = 0; i < 4; i++) later(hitOnce, 300 + i * 440);
+    }, 3400);
+    later(endFight, 12000); // safety net
+    return true;
+  }
+  // Random visits: first one 3 to 8 minutes after opening, then every 20 to 45 minutes.
+  function scheduleMurloc(first) {
+    const min = first ? 3 : 20, max = first ? 8 : 45;
+    setTimeout(() => { startFight(); scheduleMurloc(false); }, (min + Math.random() * (max - min)) * 60000);
+  }
+  scheduleMurloc(true);
+  window.lontraxMurloc = startFight; // handy for testing from the dev tools
+
   $("mascot-sprite").addEventListener("click", () => {
-    if (Date.now() < celebrateUntil) return;
+    const now = Date.now();
+    fight.clicks = fight.clicks.filter((t) => now - t < 2500);
+    fight.clicks.push(now);
+    if (fight.clicks.length >= 5 && !fight.on) {
+      fight.clicks = [];
+      if (startFight(true)) return;
+    }
+    if (fight.on || Date.now() < celebrateUntil) return;
     const p = PHRASES[Math.floor(Math.random() * PHRASES.length)];
     const was = $("mascot-sprite").className.split(" ")[1];
     celebrateUntil = Date.now() + 1300;

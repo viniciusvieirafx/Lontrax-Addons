@@ -282,6 +282,47 @@ code { font-family: Consolas, monospace; color: var(--gold-hi); }
   border: 6px solid transparent; border-left-color: var(--gold-lo); border-right: 0;
 }
 
+/* Lontrinha vs murloc: the otter's sword frames are 36x28 (sword on the left), so the sprite grows left */
+.mascot-sprite.lutando {
+  width: 108px; background-image: url("lontrinha-luta.png"); background-size: 432px 84px;
+  animation: sprite4l .44s steps(4) infinite;
+}
+@keyframes sprite4l { from { background-position: 0 0; } to { background-position: -432px 0; } }
+.murloc {
+  position: fixed; z-index: 9; width: 84px; height: 84px; cursor: pointer;
+  image-rendering: pixelated; background: url("lontrinha-murloc.png") 0 0 / 336px 84px no-repeat;
+  animation: sprite4 .5s steps(4) infinite;
+  filter: drop-shadow(0 6px 8px rgba(0,0,0,.55));
+  transition: left 3.4s linear;
+}
+.murloc.stop { animation-duration: 1.4s; }
+.murloc.hit { animation: sprite4 1.4s steps(4) infinite, murlocHit .22s ease-out; }
+@keyframes murlocHit {
+  0% { filter: brightness(3) drop-shadow(0 0 6px #fff); transform: translateX(0); }
+  40% { transform: translateX(-10px) rotate(-6deg); }
+  100% { filter: drop-shadow(0 6px 8px rgba(0,0,0,.55)); transform: translateX(0); }
+}
+.murloc.poof { cursor: default; background-image: url("lontrinha-poof.png"); animation: poof4 .7s steps(4) forwards; transition: none; }
+@keyframes poof4 { from { background-position: 0 0; } to { background-position: -336px 0; } }
+.murloc-say {
+  position: absolute; top: 80px; left: 50%; width: 130px; margin-left: -65px; text-align: center; white-space: nowrap;
+  padding: 3px 8px; font: 700 12px/1.2 var(--sans); color: #0c2a18;
+  background: #bfe7a6; border: 2px solid #2a6a3e; border-radius: 8px;
+  animation: rise .2s ease-out both;
+}
+.dmg {
+  position: fixed; z-index: 10; pointer-events: none; transform: translateX(-50%);
+  font: 900 20px/1 var(--sans); color: #ffd75e;
+  text-shadow: 0 2px 0 #1a120c, 0 0 6px rgba(0,0,0,.8);
+  animation: dmgUp .9s ease-out forwards;
+}
+.dmg.crit { font-size: 26px; color: #ff7a3d; }
+@keyframes dmgUp {
+  0% { opacity: 0; transform: translate(-50%, 6px) scale(.7); }
+  15% { opacity: 1; transform: translate(-50%, 0) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%, -46px) scale(1); }
+}
+
 body.paused *, body.paused *::before, body.paused *::after { animation-play-state: paused !important; }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
