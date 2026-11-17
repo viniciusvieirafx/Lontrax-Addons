@@ -151,7 +151,7 @@ sealed class Friends
                         if (fresher) { f.area = Str(e, "area") ?? f.area; f.online = f.online || Bool(e, "online"); }
                         if (visto != null && visto > (f.visto ?? 0)) f.visto = visto;
                         f.nota ??= Str(e, "nota") is string n && n != "" ? n : null;
-                        if (isBnet) { f.bnet = true; f.conta ??= Str(e, "conta"); }
+                        if (isBnet) { f.bnet = true; if (Str(e, "conta") is string cn && !cn.StartsWith("|K")) f.conta ??= cn; }
                         if (!f.amigoDe.Contains(mine)) f.amigoDe.Add(mine);
                         if (f.boneco == null && CharacterId(Str(e, "guid")) is long id)
                         {
