@@ -66,7 +66,9 @@ sealed class Friends
     Dictionary<string, ApiInfo>? apiCache;
     bool apiBusy;
 
-    /// <summary>All SavedVariables files of the addon (one per WoW account folder).</summary>
+    /// <summary>Every SavedVariables file that may hold LontraxAmigosDB (one or two per WoW account folder).
+    /// WoW saves an addon's variables in a file named after the addon, so since the friends list moved into
+    /// Lontrax Mercado it lives in LontraxMercado.lua; LontraxAmigos.lua is the short-lived separate addon.</summary>
     public static List<string> Files(string? addOnsPath)
     {
         var list = new List<string>();
@@ -78,8 +80,11 @@ sealed class Friends
             if (accounts == null || !Directory.Exists(accounts)) return list;
             foreach (var acc in Directory.GetDirectories(accounts))
             {
-                var f = Path.Combine(acc, "SavedVariables", "LontraxAmigos.lua");
-                if (File.Exists(f)) list.Add(f);
+                foreach (var name in new[] { "LontraxMercado.lua", "LontraxAmigos.lua" })
+                {
+                    var f = Path.Combine(acc, "SavedVariables", name);
+                    if (File.Exists(f)) list.Add(f);
+                }
             }
         }
         catch { }
@@ -148,7 +153,7 @@ sealed class Friends
                         if (fresher || f.classe == null) f.classe = Str(e, "classe") ?? f.classe;
                         f.classeEn ??= Str(e, "classeEn");
                         f.raca ??= Str(e, "raca");
-                        if (fresher) { f.area = Str(e, "area") ?? f.area; f.online = f.online || Bool(e, "online"); }
+                        if (fresher) { f.area = Str(e, "area") ?? f.area; f.online = Bool(e, "online"); }
                         if (visto != null && visto > (f.visto ?? 0)) f.visto = visto;
                         f.nota ??= Str(e, "nota") is string n && n != "" ? n : null;
                         if (isBnet) { f.bnet = true; if (Str(e, "conta") is string cn && !cn.StartsWith("|K")) f.conta ??= cn; }
