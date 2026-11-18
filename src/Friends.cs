@@ -194,10 +194,45 @@ sealed class Friends
                 }
             }
         }
+        if (found) KeepKnown(bySlug);
         var list = bySlug.Values.ToList();
         ApplyApi(list);
         ApplyHistory(list);
         return (list, found, updated);
+    }
+
+    // ---------- everyone ever seen ----------
+    static string KnownFile => Path.Combine(Dir, "conhecidos.json");
+
+    /// <summary>The list only grows: a friend missing from the game's file (old addon versions dropped people when
+    /// the game sent a partial list at login) comes back from the app's own copy, shown as offline.</summary>
+    static void KeepKnown(Dictionary<string, Friend> bySlug)
+    {
+        Dictionary<string, Friend> known;
+        try { known = File.Exists(KnownFile) ? JsonSerializer.Deserialize<Dictionary<string, Friend>>(File.ReadAllText(KnownFile)) ?? new() : new(); }
+        catch { known = new(); }
+        foreach (var (slug, old) in known)
+        {
+            if (bySlug.TryGetValue(slug, out var now))
+            {
+                // fill what the new copy lacks (e.g. level or picture from an older save)
+                if (old.nivel > now.nivel) now.nivel = old.nivel;
+                now.classe ??= old.classe; now.classeEn ??= old.classeEn; now.raca ??= old.raca;
+                now.boneco ??= old.boneco; now.rosto ??= old.rosto; now.conta ??= old.conta; now.nota ??= old.nota;
+                if ((old.visto ?? 0) > (now.visto ?? 0)) now.visto = old.visto;
+                now.bnet |= old.bnet; now.eu |= old.eu;
+                continue;
+            }
+            old.online = false;
+            old.historico = new();
+            bySlug[slug] = old;
+        }
+        try
+        {
+            Directory.CreateDirectory(Dir);
+            File.WriteAllText(KnownFile, JsonSerializer.Serialize(bySlug));
+        }
+        catch (Exception ex) { MainForm.LogError("amigos", ex); }
     }
 
     // ---------- level history ----------
