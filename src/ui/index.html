@@ -96,10 +96,14 @@
     <div class="fr-top">
       <div class="fr-summary" id="fr-summary">Lendo a sua lista de amigos…</div>
       <div class="fr-tools">
+        <input id="fr-search" class="fr-search" type="search" placeholder="Buscar nome…" aria-label="Buscar amigo pelo nome">
+        <select id="fr-class" class="fr-sort" aria-label="Classe"><option value="">Todas as classes</option></select>
         <div class="tabs-mini" id="fr-filter">
           <button data-f="todos" class="on" type="button">Todos</button>
+          <button data-f="favoritos" type="button">★ Favoritos</button>
           <button data-f="online" type="button">Online</button>
           <button data-f="upando" type="button">Upando</button>
+          <button data-f="escondidos" type="button">Escondidos</button>
         </div>
         <select id="fr-sort" class="fr-sort" aria-label="Ordenar">
           <option value="nivel">Maior nível</option>

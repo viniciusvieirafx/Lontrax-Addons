@@ -26,6 +26,13 @@
   let timer = null;
   let filter = LS("lontrax.fr.filter") || "todos";
   let sort = LS("lontrax.fr.sort") || "nivel";
+  let search = "";
+  let classF = LS("lontrax.fr.class") || "";
+  // favoritos e escondidos ficam guardados no app (por nome-sobrenome do personagem)
+  const loadSet = (k) => { try { return new Set(JSON.parse(LS(k) || "[]")); } catch (e) { return new Set(); } };
+  const favs = loadSet("lontrax.fr.fav");
+  const hidden = loadSet("lontrax.fr.hidden");
+  const saveSet = (k, s) => LS(k, JSON.stringify([...s]));
 
   function ago(unix) {
     if (!unix) return "";
@@ -72,7 +79,7 @@
     if (f.guilda) extra.push(`&lt;${esc(f.guilda)}&gt;`);
     if (f.ilvl) extra.push(`item nível ${f.ilvl}`);
     return `
-      <article class="fr-card${f.online ? " online" : ""}${f.eu ? " eu" : ""}" style="--cls:${color}">
+      <article class="fr-card${f.online ? " online" : ""}${f.eu ? " eu" : ""}${favs.has(f.slug) ? " fav" : ""}${hidden.has(f.slug) ? " escondido" : ""}" style="--cls:${color}">
         ${f.eu ? `<div class="fr-me">Você</div>` : ""}
         <div class="fr-pic">
           <div class="fr-initial">${initial}</div>
@@ -82,13 +89,17 @@
           <div class="fr-badges">${badges.join("")}</div>
         </div>
         <div class="fr-body">
-          <h3 class="fr-name">${esc(f.nome)}${f.sobrenome ? ` <span>${esc(f.sobrenome)}</span>` : ""}</h3>
+          <h3 class="fr-name">${favs.has(f.slug) ? `<b class="fr-star" title="Favorito">★</b>` : ""}${esc(f.nome)}${f.sobrenome ? ` <span>${esc(f.sobrenome)}</span>` : ""}</h3>
           <div class="fr-class">${lvlLine}</div>
           ${extra.length ? `<div class="fr-extra">${extra.join(" · ")}</div>` : ""}
           <div class="fr-bar" title="${f.nivel} de ${max}"><div style="width:${pct}%"></div></div>
           <div class="fr-status">${status}</div>
           ${spark(f.historico, max)}
           ${f.nota ? `<div class="fr-note">“${esc(f.nota)}”</div>` : ""}
+          ${f.eu ? "" : `<div class="fr-actions">
+            <button type="button" class="fr-act fav${favs.has(f.slug) ? " on" : ""}" data-act="fav" data-slug="${esc(f.slug)}">${favs.has(f.slug) ? "★ Favorito" : "☆ Favoritar"}</button>
+            <button type="button" class="fr-act hide" data-act="hide" data-slug="${esc(f.slug)}">${hidden.has(f.slug) ? "Mostrar de novo" : "Esconder"}</button>
+          </div>`}
         </div>
       </article>`;
   }
@@ -122,13 +133,23 @@
       return;
     }
     empty.hidden = true;
-    const friends = list.filter((f) => !f.eu);
+    fillClasses(list);
+    const friends = list.filter((f) => !f.eu && !hidden.has(f.slug));
+    const nHidden = list.filter((f) => !f.eu && hidden.has(f.slug)).length;
     const online = friends.filter((f) => f.online).length;
     const up = friends.filter((f) => f.ganhou7 > 0).length;
-    sum.innerHTML = `<b>${friends.length}</b> ${friends.length === 1 ? "amigo" : "amigos"} · <b>${online}</b> online · <b>${up}</b> upando esta semana` +
+    sum.innerHTML = `<b>${friends.length}</b> ${friends.length === 1 ? "amigo" : "amigos"} · <b>${online}</b> online · <b>${up}</b> upando esta semana` + (nHidden ? ` · <b>${nHidden}</b> ${nHidden === 1 ? "escondido" : "escondidos"}` : "") +
       (data.atualizado ? `<span class="fr-when">lista do jogo de ${esc(data.atualizado)} (atualiza com /reload ou ao sair do jogo)</span>` : "");
+    // escondidos só aparecem no filtro "Escondidos" (e lá só eles)
+    list = filter === "escondidos" ? list.filter((f) => hidden.has(f.slug)) : list.filter((f) => !hidden.has(f.slug));
+    if (filter === "favoritos") list = list.filter((f) => favs.has(f.slug) || f.eu);
     if (filter === "online") list = list.filter((f) => f.online);
     if (filter === "upando") list = list.filter((f) => f.ganhou7 > 0 || f.ganhou30 > 0);
+    if (classF) list = list.filter((f) => f.classeEn === classF);
+    if (search) {
+      const q = norm(search);
+      list = list.filter((f) => norm([f.nome, f.sobrenome, f.conta, f.nota].filter(Boolean).join(" ")).includes(q));
+    }
     const byName = (a, b) => a.nome.localeCompare(b.nome, "pt-BR");
     const sorts = {
       nivel: (a, b) => b.nivel - a.nivel || byName(a, b),
@@ -137,9 +158,11 @@
       nome: byName,
     };
     const by = sorts[sort] || sorts.nivel;
-    list.sort((a, b) => (b.eu ? 1 : 0) - (a.eu ? 1 : 0) || by(a, b)); // você sempre primeiro
+    const rank = (f) => (f.eu ? 2 : favs.has(f.slug) ? 1 : 0);
+    list.sort((a, b) => rank(b) - rank(a) || by(a, b)); // você, depois os favoritos, depois o resto
     grid.innerHTML = list.length ? list.map((f) => card(f, max)).join("") :
-      `<div class="fr-none">Ninguém aqui com esse filtro.</div>`;
+      `<div class="fr-none">${filter === "escondidos" ? "Ninguém escondido. Para esconder alguém, clique em <b>Esconder</b> no cartão." :
+        filter === "favoritos" ? "Nenhum favorito ainda. Clique em <b>☆ Favoritar</b> no cartão de um amigo." : "Ninguém aqui com esse filtro."}</div>`;
     // boneco que não carregar (personagem novo ainda sem foto na Blizzard): fica a inicial
     grid.querySelectorAll(".fr-badge.bnet").forEach((b) => b.addEventListener("click", () => {
       const open = b.classList.toggle("open");
@@ -162,6 +185,34 @@
   }
   document.querySelectorAll("#fr-filter button").forEach((b) => b.addEventListener("click", () => setFilter(b.dataset.f)));
   setFilter(filter);
+  // ações dos cartões (um ouvinte só, vale para os cartões redesenhados)
+  $("fr-grid").addEventListener("click", (e) => {
+    const b = e.target.closest(".fr-act");
+    if (!b) return;
+    const slug = b.dataset.slug;
+    if (b.dataset.act === "fav") {
+      if (favs.has(slug)) favs.delete(slug); else favs.add(slug);
+      saveSet("lontrax.fr.fav", favs);
+    } else {
+      if (hidden.has(slug)) hidden.delete(slug); else hidden.add(slug);
+      saveSet("lontrax.fr.hidden", hidden);
+    }
+    render();
+  });
+  const norm = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  $("fr-search").addEventListener("input", (e) => { search = e.target.value.trim(); render(); });
+  function fillClasses(list) {
+    const sel = $("fr-class");
+    const seen = new Map();
+    list.forEach((f) => { if (f.classeEn && !seen.has(f.classeEn)) seen.set(f.classeEn, f.classe || f.classeEn); });
+    const key = [...seen.keys()].sort().join(",");
+    if (sel.dataset.key === key) return;
+    sel.dataset.key = key;
+    sel.innerHTML = `<option value="">Todas as classes</option>` +
+      [...seen].sort((a, b) => a[1].localeCompare(b[1], "pt-BR")).map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join("");
+    sel.value = seen.has(classF) ? classF : "";
+  }
+  $("fr-class").addEventListener("change", (e) => { classF = e.target.value; LS("lontrax.fr.class", classF); render(); });
   $("fr-sort").value = sort;
   $("fr-sort").addEventListener("change", (e) => { sort = e.target.value; LS("lontrax.fr.sort", sort); render(); });
 
