@@ -65,7 +65,8 @@
     if (f.nivel >= max) badges.push(`<span class="fr-badge max">Nível máximo!</span>`);
     else if (f.ganhou7 > 0) badges.push(`<span class="fr-badge up">▲ ${f.ganhou7} ${f.ganhou7 === 1 ? "nível" : "níveis"} na semana</span>`);
     else if (f.ganhou30 > 0) badges.push(`<span class="fr-badge up soft">▲ ${f.ganhou30} no mês</span>`);
-    if (f.bnet) badges.push(`<span class="fr-badge bnet" title="Amigo da Battle.net${f.conta ? ": " + esc(f.conta) : ""}">Battle.net</span>`);
+    // clicar no selo mostra a conta Battle.net dona do personagem (clicar de novo volta)
+    if (f.bnet) badges.push(`<button type="button" class="fr-badge bnet" data-conta="${esc(f.conta || "")}" title="Clique para ver a conta Battle.net">Battle.net</button>`);
     const extra = [];
     if (f.guilda) extra.push(`&lt;${esc(f.guilda)}&gt;`);
     if (f.ilvl) extra.push(`item nível ${f.ilvl}`);
@@ -135,6 +136,11 @@
     grid.innerHTML = list.length ? list.map((f) => card(f, max)).join("") :
       `<div class="fr-none">Ninguém aqui com esse filtro.</div>`;
     // boneco que não carregar (personagem novo ainda sem foto na Blizzard): fica a inicial
+    grid.querySelectorAll(".fr-badge.bnet").forEach((b) => b.addEventListener("click", () => {
+      const open = b.classList.toggle("open");
+      const conta = b.dataset.conta;
+      b.textContent = !open ? "Battle.net" : conta ? "Conta: " + conta : "Conta ainda não informada (dê /reload no jogo)";
+    }));
     grid.querySelectorAll(".fr-boneco").forEach((img) => {
       const ok = () => img.closest(".fr-pic").classList.add("has-pic");
       if (img.complete && img.naturalWidth > 0) ok();

@@ -64,7 +64,9 @@
 .fr-badge.up { color: #0b2a12; background: var(--ok); border-color: #2b7a3a; }
 .fr-badge.up.soft { color: var(--ok); background: rgba(8,17,41,.85); border-color: rgba(127,209,139,.5); }
 .fr-badge.max { color: #2a1d05; background: linear-gradient(180deg, var(--gold-hi), var(--gold)); border-color: var(--gold-lo); }
-.fr-badge.bnet { color: #9fd3ff; border-color: rgba(80,160,255,.5); }
+.fr-badge.bnet { color: #9fd3ff; border-color: rgba(80,160,255,.5); cursor: pointer; font-family: var(--sans); }
+.fr-badge.bnet:hover { border-color: #6fb6ff; background: rgba(20,50,100,.9); }
+.fr-badge.bnet.open { color: #fff; background: linear-gradient(180deg, #1d6fd1, #0e4a96); border-color: #6fb6ff; }
 
 .fr-body { padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 6px; }
 .fr-name { margin: 0; font: 700 17px/1.2 var(--serif); color: var(--gold-hi); }
