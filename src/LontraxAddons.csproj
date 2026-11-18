@@ -44,6 +44,7 @@
     <EmbeddedResource Include="..\assets\brasao.png" LogicalName="ui.brasao.png" />
     <EmbeddedResource Include="..\assets\brasao.ico" LogicalName="ui.brasao.ico" />
     <EmbeddedResource Include="ui\lontrinha-*.png" LogicalName="ui.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="ui\classe-*.png" LogicalName="ui.%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

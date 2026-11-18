@@ -27,6 +27,8 @@ sealed class Friends
         public long? visto { get; set; }
         public string? nota { get; set; }
         public bool bnet { get; set; }
+        /// <summary>One of your own characters (shown first, with its own frame).</summary>
+        public bool eu { get; set; }
         public string? conta { get; set; }
         public List<string> amigoDe { get; set; } = new();
         public string? boneco { get; set; }
@@ -134,6 +136,31 @@ sealed class Friends
             {
                 if (cv is not Dictionary<object, object?> c) continue;
                 var mine = Str(c, "nome") ?? "?";
+                // your own character (Lontrax Mercado 1.4.5+ also saves level, class, race, zone)
+                if (Str(c, "nome") is string myName)
+                {
+                    var mySur = Str(c, "sobrenome");
+                    var mySlug = Slug(myName, mySur);
+                    if (!bySlug.TryGetValue(mySlug, out var me))
+                        bySlug[mySlug] = me = new Friend { slug = mySlug, nome = myName, sobrenome = mySur };
+                    me.eu = true;
+                    var myVisto = (long?)Num(c, "visto") ?? (long?)Num(c, "atualizado");
+                    if ((myVisto ?? 0) >= (me.visto ?? 0))
+                    {
+                        me.visto = myVisto;
+                        me.area = Str(c, "area") ?? me.area;
+                        me.classe = Str(c, "classe") ?? me.classe;
+                    }
+                    if ((int)(Num(c, "nivel") ?? 0) is int ml && ml > me.nivel) me.nivel = ml;
+                    me.classeEn ??= Str(c, "classeEn");
+                    me.raca ??= Str(c, "raca");
+                    var myGuid = Str(c, "guid");
+                    if (me.boneco == null && CharacterId(myGuid ?? CharKey(chars, c)) is long myId)
+                    {
+                        me.boneco = Render(myId, "main-raw.png");
+                        me.rosto = Render(myId, "avatar.jpg");
+                    }
+                }
                 foreach (var (part, isBnet) in new[] { ("amigos", false), ("bnet", true) })
                 {
                     if (c.GetValueOrDefault(part) is not Dictionary<object, object?> fr) continue;
@@ -284,6 +311,10 @@ sealed class Friends
         7 => "SHAMAN", 8 => "MAGE", 9 => "WARLOCK", 10 => "MONK", 11 => "DRUID", 12 => "DEMONHUNTER", 13 => "EVOKER",
         _ => null,
     };
+
+    /// <summary>The ["Player-..."] key of a character block (older files have no "guid" field inside).</summary>
+    static string? CharKey(Dictionary<object, object?> chars, Dictionary<object, object?> c) =>
+        chars.FirstOrDefault(kv => ReferenceEquals(kv.Value, c)).Key as string;
 
     static string? Str(Dictionary<object, object?> d, string k) => d.GetValueOrDefault(k) as string;
     static double? Num(Dictionary<object, object?> d, string k) => d.GetValueOrDefault(k) is double v ? v : null;

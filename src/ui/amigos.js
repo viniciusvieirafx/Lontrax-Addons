@@ -56,7 +56,8 @@
     const initial = esc((f.nome || "?").charAt(0).toUpperCase());
     const lvlLine = [f.nivel ? `Nível ${f.nivel}` : "Nível ?", f.classe, f.raca].filter(Boolean).map(esc).join(" · ");
     let status;
-    if (f.online) status = `<span class="fr-dot on"></span>Online${f.area ? " em " + esc(f.area) : ""}`;
+    if (f.eu) status = `<span class="fr-dot me"></span>Seu personagem${f.area ? " · " + esc(f.area) : ""}`;
+    else if (f.online) status = `<span class="fr-dot on"></span>Online${f.area ? " em " + esc(f.area) : ""}`;
     else {
       const seen = f.ultimoLogin || f.visto;
       status = `<span class="fr-dot"></span>Offline${seen ? " · visto " + ago(seen) : ""}${f.area ? " · " + esc(f.area) : ""}`;
@@ -71,11 +72,13 @@
     if (f.guilda) extra.push(`&lt;${esc(f.guilda)}&gt;`);
     if (f.ilvl) extra.push(`item nível ${f.ilvl}`);
     return `
-      <article class="fr-card${f.online ? " online" : ""}" style="--cls:${color}">
+      <article class="fr-card${f.online ? " online" : ""}${f.eu ? " eu" : ""}" style="--cls:${color}">
+        ${f.eu ? `<div class="fr-me">Você</div>` : ""}
         <div class="fr-pic">
           <div class="fr-initial">${initial}</div>
           ${f.boneco ? `<img class="fr-boneco" alt="" loading="lazy" src="${esc(f.boneco)}">` : ""}
           <div class="fr-lvl" title="Nível">${f.nivel || "?"}</div>
+          ${CLASS_COLOR[f.classeEn] ? `<img class="fr-cls" alt="${esc(f.classe || "")}" title="${esc(f.classe || "")}" src="classe-${f.classeEn}.png">` : ""}
           <div class="fr-badges">${badges.join("")}</div>
         </div>
         <div class="fr-body">
@@ -119,9 +122,10 @@
       return;
     }
     empty.hidden = true;
-    const online = list.filter((f) => f.online).length;
-    const up = list.filter((f) => f.ganhou7 > 0).length;
-    sum.innerHTML = `<b>${list.length}</b> ${list.length === 1 ? "amigo" : "amigos"} · <b>${online}</b> online · <b>${up}</b> upando esta semana` +
+    const friends = list.filter((f) => !f.eu);
+    const online = friends.filter((f) => f.online).length;
+    const up = friends.filter((f) => f.ganhou7 > 0).length;
+    sum.innerHTML = `<b>${friends.length}</b> ${friends.length === 1 ? "amigo" : "amigos"} · <b>${online}</b> online · <b>${up}</b> upando esta semana` +
       (data.atualizado ? `<span class="fr-when">lista do jogo de ${esc(data.atualizado)} (atualiza com /reload ou ao sair do jogo)</span>` : "");
     if (filter === "online") list = list.filter((f) => f.online);
     if (filter === "upando") list = list.filter((f) => f.ganhou7 > 0 || f.ganhou30 > 0);
@@ -132,7 +136,8 @@
       online: (a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0) || b.nivel - a.nivel,
       nome: byName,
     };
-    list.sort(sorts[sort] || sorts.nivel);
+    const by = sorts[sort] || sorts.nivel;
+    list.sort((a, b) => (b.eu ? 1 : 0) - (a.eu ? 1 : 0) || by(a, b)); // você sempre primeiro
     grid.innerHTML = list.length ? list.map((f) => card(f, max)).join("") :
       `<div class="fr-none">Ninguém aqui com esse filtro.</div>`;
     // boneco que não carregar (personagem novo ainda sem foto na Blizzard): fica a inicial
@@ -183,7 +188,7 @@
     data = {
       addon: "ok", achou: true, maxNivel: 60, atualizado: "17/11 21:40",
       lista: [
-        { nome: "Miranajanela", sobrenome: "Lontrax", nivel: 33, classe: "Ladino", classeEn: "ROGUE", raca: "Elfo Noturno", area: "Floresta do Elwynn", online: true, ganhou7: 3, ganhou30: 8, guilda: "Made in Brazil", ilvl: 28, boneco: "https://render.worldofwarcraft.com/forever-us/character/219/5136859-main-raw.png", historico: [[20400, 25], [20402, 27], [20405, 30], [20407, 33]] },
+        { eu: true, nome: "Miranajanela", sobrenome: "Lontrax", nivel: 33, classe: "Ladino", classeEn: "ROGUE", raca: "Elfo Noturno", area: "Floresta do Elwynn", online: true, ganhou7: 3, ganhou30: 8, guilda: "Made in Brazil", ilvl: 28, boneco: "https://render.worldofwarcraft.com/forever-us/character/219/5136859-main-raw.png", historico: [[20400, 25], [20402, 27], [20405, 30], [20407, 33]] },
         { nome: "Thorgrim", sobrenome: "Pedrabarba", nivel: 60, classe: "Guerreiro", classeEn: "WARRIOR", raca: "Anão", online: false, visto: Date.now() / 1000 - 86400 * 2, ganhou7: 0, ganhou30: 2, historico: [] },
         { nome: "Lunara", nivel: 18, classe: "Sacerdote", classeEn: "PRIEST", raca: "Humano", online: false, visto: Date.now() / 1000 - 3600 * 5, ganhou7: 0, ganhou30: 0, nota: "tank da quarta", bnet: true, historico: [] },
       ],
