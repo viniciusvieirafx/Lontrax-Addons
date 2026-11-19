@@ -106,6 +106,21 @@
         "Interface"
       ],
       "obrigatorio": false
+    },
+    {
+      "id": "lontraxglow",
+      "nome": "LontraxGlow - Brilho de coleta",
+      "descricao": "Minérios, ervas, objetos de missão, baús e a boia de pesca brilham quando você chega perto, cada um com sua cor e o nome embaixo. Conta o que você coletou e pode alternar Encontrar Ervas/Minérios sozinho. Visual escuro do MF.",
+      "repo": "LontraxWoW/LontraxGlow",
+      "ref": "main",
+      "pasta": "LontraxGlow",
+      "banner": "banner.webp",
+      "autor": "Lontrax",
+      "tags": [
+        "Profissões",
+        "Interface"
+      ],
+      "obrigatorio": false
     }
   ]
 }
