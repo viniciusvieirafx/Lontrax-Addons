@@ -6,3 +6,5 @@ dist/
 src/ui/ah-rows.json
 src/ui/nomes-en.json
 src/ui/ah-bags.json
+
+.claude/
