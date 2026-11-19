@@ -121,6 +121,21 @@
         "Interface"
       ],
       "obrigatorio": false
+    },
+    {
+      "id": "vuhtrax",
+      "nome": "Vuhtrax - Quadros de grupo e raide",
+      "descricao": "Quadros de grupo e raide no estilo do VuhDo, com o visual escuro do MF. Clique para curar (Shift/Ctrl/Alt + mouse lançam a magia que você escolher), seus HoTs, debuffs que você pode tirar com borda colorida, agro, cura chegando, escudos, ícone da classe e quem está longe fica apagado. Abra pela bolinha no minimapa ou /vt.",
+      "repo": "LontraxWoW/Vuhtrax",
+      "ref": "main",
+      "pasta": "Vuhtrax",
+      "banner": "banner.webp",
+      "autor": "Lontrax",
+      "tags": [
+        "Grupo e Raide",
+        "Interface"
+      ],
+      "obrigatorio": false
     }
   ]
 }
