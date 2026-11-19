@@ -428,6 +428,14 @@
   }
   scheduleMurloc(true);
   window.lontraxMurloc = startFight; // handy for testing from the dev tools
+  // for natal.js: the otter talks, and nothing automatic interrupts her while she unpacks a box
+  window.lontraxMascote = {
+    fala: (mode, text, ms) => setMascot(mode, text, ms),
+    segura: (ms) => { celebrateUntil = Date.now() + ms; },
+    solta: () => { celebrateUntil = 0; lastAuto = ""; mascotAuto(); },
+    login: () => state.login || "",
+    ocupada: () => fight.on || !!document.querySelector(".card .progress:not([hidden])"),
+  };
 
   $("mascot-sprite").addEventListener("click", () => {
     const now = Date.now();

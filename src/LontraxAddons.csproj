@@ -9,7 +9,7 @@
     <AssemblyName>Lontrax Addons</AssemblyName>
     <RootNamespace>LontraxAddons</RootNamespace>
     <ApplicationIcon>..\assets\brasao.ico</ApplicationIcon>
-    <Version>1.8.6</Version>
+    <Version>1.9.0</Version>
     <Product>Lontrax Addons</Product>
     <Company>Lontrax</Company>
     <Description>Instala e atualiza os addons da galera Lontrax</Description>
@@ -37,6 +37,9 @@
     <EmbeddedResource Include="ui\market.js" LogicalName="ui.market.js" />
     <EmbeddedResource Include="ui\amigos.css" LogicalName="ui.amigos.css" />
     <EmbeddedResource Include="ui\amigos.js" LogicalName="ui.amigos.js" />
+    <EmbeddedResource Include="ui\natal.css" LogicalName="ui.natal.css" />
+    <EmbeddedResource Include="ui\natal.js" LogicalName="ui.natal.js" />
+    <EmbeddedResource Include="ui\natal-*.png" LogicalName="ui.%(Filename)%(Extension)" />
     <!-- Mercado: recipes + house list, so the tab opens at once (refreshed from Blizzard weekly) -->
     <EmbeddedResource Include="data\receitas.json" LogicalName="data.receitas.json" />
     <EmbeddedResource Include="data\casas.json" LogicalName="data.casas.json" />

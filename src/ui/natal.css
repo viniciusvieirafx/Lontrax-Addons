@@ -1,0 +1,177 @@
+/* ===================== Natal: a lontrinha enfeita o app, um enfeite por dia ===================== */
+/* Everything here hangs off body.natal (season on) and one body class per unlocked decoration. */
+.natal-px { image-rendering: pixelated; pointer-events: none; }
+.top { position: relative; }
+
+/* ---------- contagem regressiva (cabeçalho, ao lado do brasão) ---------- */
+.natal-conta {
+  margin: 0 auto 0 36px; padding: 6px 14px 7px; border-radius: 12px; cursor: pointer;
+  display: flex; align-items: center; gap: 10px;
+  background: linear-gradient(180deg, rgba(138,22,38,.55), rgba(60,10,20,.55));
+  border: 1px solid rgba(236,88,96,.55);
+  box-shadow: 0 0 18px rgba(236,88,96,.18), inset 0 1px 0 rgba(255,255,255,.12);
+  animation: rise .5s ease-out both;
+}
+.natal-conta:hover { border-color: #f6e08a; }
+.natal-conta .nc-arv { width: 30px; height: 40px; background: url("natal-arvore.png") 0 0 / 30px 40px no-repeat; image-rendering: pixelated; flex: none; }
+.natal-conta .nc-txt { display: flex; flex-direction: column; line-height: 1.1; }
+.natal-conta .nc-tit { font: 700 11px var(--serif); letter-spacing: .18em; text-transform: uppercase; color: #ffd6d6; }
+.natal-conta .nc-num { font: 700 19px var(--serif); color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.5); white-space: nowrap; }
+.natal-conta .nc-num small { font: 600 12px var(--sans); color: #ffd6d6; margin: 0 6px 0 2px; }
+.natal-conta.festa .nc-num { background: linear-gradient(90deg, #fff, var(--gold-hi), #fff); -webkit-background-clip: text; background-clip: text; color: transparent; background-size: 200% 100%; animation: shine 2.4s linear infinite; }
+
+/* ---------- 1. pisca-pisca no cabeçalho / 9. nas abas ---------- */
+.natal-luzes { position: absolute; left: 0; right: 0; height: 22px; pointer-events: none; z-index: 5; }
+.natal-luzes svg { position: absolute; inset: 0; width: 100%; height: 12px; overflow: visible; }
+.natal-luzes svg path { fill: none; stroke: #1d3a22; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.natal-luzes .lamps { position: absolute; inset: 0; display: flex; justify-content: space-around; }
+.natal-luzes i {
+  display: block; width: 8px; height: 12px; margin-top: 5px; border-radius: 50% 50% 45% 45%;
+  background: var(--c); box-shadow: 0 0 8px 2px var(--c);
+  animation: natalPisca 1.6s ease-in-out infinite; animation-delay: var(--d);
+}
+.natal-luzes i::before { content: ""; display: block; width: 4px; height: 3px; margin: -3px auto 0; background: #3b4a3e; border-radius: 1px; }
+.natal-luzes i:nth-child(even) { margin-top: 7px; }
+@keyframes natalPisca { 0%, 100% { opacity: 1; filter: brightness(1.2); } 50% { opacity: .35; filter: brightness(.7); box-shadow: none; } }
+.natal-luzes.topo { bottom: -12px; }
+.natal-luzes.abas { position: relative; height: 18px; margin: -4px 28px -10px; }
+.natal-luzes.abas i { width: 6px; height: 9px; }
+
+/* ---------- 2. neve (atrás do conteúdo, só aparece no fundo) ---------- */
+.natal-neve { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.natal-neve b {
+  position: absolute; top: -10px; width: var(--s); height: var(--s); border-radius: 50%;
+  background: #fff; opacity: var(--o); filter: blur(.4px);
+  animation: natalNeve var(--t) linear infinite; animation-delay: var(--d);
+}
+@keyframes natalNeve {
+  0% { transform: translate(0, -10px); }
+  50% { transform: translate(var(--x), 52vh); }
+  100% { transform: translate(0, 105vh); }
+}
+
+/* ---------- 3. laços nos cartões de addon ---------- */
+body.natal-lacos .card::after {
+  content: ""; position: absolute; z-index: 3; top: -10px; left: -10px; width: 39px; height: 33px;
+  background: url("natal-tampa.png") 0 -12px / 39px 39px no-repeat; image-rendering: pixelated;
+  transform: rotate(-18deg); pointer-events: none; filter: drop-shadow(0 3px 3px rgba(0,0,0,.5));
+}
+
+/* ---------- 4. bolinhas penduradas no topo ---------- */
+.natal-bolas { position: fixed; top: 0; left: calc(50% + 20px); z-index: 4; display: flex; gap: 26px; pointer-events: none; }
+.natal-bolas span { position: relative; width: 2px; background: linear-gradient(#d9b45a, #8b6a23); transform-origin: top center; animation: natalBalanca 3.2s ease-in-out infinite alternate; }
+.natal-bolas span:nth-child(1) { height: 22px; animation-delay: -.6s; }
+.natal-bolas span:nth-child(2) { height: 40px; animation-delay: -1.7s; }
+.natal-bolas span:nth-child(3) { height: 28px; animation-delay: -1.1s; }
+.natal-bolas span::after {
+  content: ""; position: absolute; top: 100%; left: 50%; width: 22px; height: 22px; margin-left: -11px; border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #fff 0 8%, var(--c) 30%, var(--c2) 100%);
+  box-shadow: 0 4px 10px rgba(0,0,0,.45), 0 0 14px var(--glow);
+}
+.natal-bolas span::before { content: ""; position: absolute; top: 100%; left: 50%; width: 8px; height: 5px; margin: -3px 0 0 -4px; background: linear-gradient(#f6e08a, #9a7424); border-radius: 2px; z-index: 1; }
+.natal-bolas span:nth-child(1) { --c: #e8505a; --c2: #7a1020; --glow: rgba(236,88,96,.35); }
+.natal-bolas span:nth-child(2) { --c: #f4dc98; --c2: #8b6a23; --glow: rgba(244,220,152,.35); }
+.natal-bolas span:nth-child(3) { --c: #5f9cf0; --c2: #1d3e86; --glow: rgba(95,156,240,.35); }
+@keyframes natalBalanca { from { transform: rotate(-7deg); } to { transform: rotate(7deg); } }
+
+/* ---------- 5. bengalas doces no Mercado ---------- */
+/* in the bar's left gutter, out of the flow, so the Mercado bar keeps its layout */
+#ah-main .ah-bar { position: relative; }
+.natal-bengalas { position: absolute; left: 1px; top: 6px; width: 26px; height: 34px; pointer-events: none; }
+.natal-bengalas i { position: absolute; top: 0; width: 17px; height: 34px; background: url("natal-bengala.png") 0 0 / 17px 34px no-repeat; image-rendering: pixelated; filter: drop-shadow(0 3px 3px rgba(0,0,0,.45)); }
+.natal-bengalas i:first-child { left: 0; transform: rotate(-12deg); }
+.natal-bengalas i:last-child { left: 9px; transform: scaleX(-1) rotate(-12deg); }
+
+/* ---------- 6. gorro na lontrinha ---------- */
+body.natal-gorro .mascot-sprite.parada { background-image: url("lontrinha-parada-natal.png"); }
+body.natal-gorro .mascot-sprite.avisando { background-image: url("lontrinha-avisando-natal.png"); }
+body.natal-gorro .mascot-sprite.trabalhando { background-image: url("lontrinha-trabalhando-natal.png"); }
+body.natal-gorro .mascot-sprite.comemorando { background-image: url("lontrinha-comemorando-natal.png"); }
+body.natal-gorro .mascot-sprite.lutando { background-image: url("lontrinha-luta-natal.png"); }
+
+/* ---------- 7. boneco de neve na aba Amigos ---------- */
+.natal-boneco { position: fixed; left: 18px; bottom: 34px; z-index: 4; width: 66px; height: 90px; background: url("natal-boneco.png") 0 0 / 66px 90px no-repeat; filter: drop-shadow(0 6px 6px rgba(0,0,0,.5)); animation: natalBoneco 4s ease-in-out infinite; transform-origin: bottom center; }
+@keyframes natalBoneco { 0%, 100% { transform: rotate(0); } 46% { transform: rotate(0); } 50% { transform: rotate(-5deg); } 54% { transform: rotate(4deg); } 58% { transform: rotate(0); } }
+
+/* ---------- 8. guirlanda no brasão ---------- */
+.natal-guirlanda { position: absolute; z-index: 0; left: 50%; top: 50%; width: 102px; height: 102px; margin: -51px 0 0 -51px; background: url("natal-guirlanda.png") 0 0 / 102px 102px no-repeat; filter: drop-shadow(0 3px 5px rgba(0,0,0,.5)); }
+
+/* ---------- 10. gorrinhos nos amigos ---------- */
+body.natal-gorrinhos .fr-lvl::before {
+  content: ""; position: absolute; top: -13px; left: 16px; width: 31px; height: 24px;
+  background: url("natal-gorrinho.png") 0 0 / 31px 24px no-repeat; image-rendering: pixelated;
+  transform: rotate(16deg); filter: drop-shadow(0 2px 2px rgba(0,0,0,.5)); pointer-events: none;
+}
+
+/* ---------- 11. sininhos no rodapé ---------- */
+.natal-sinos { display: inline-flex; gap: 2px; margin-right: 8px; vertical-align: middle; pointer-events: none; }
+.natal-sinos i { width: 22px; height: 22px; margin-top: -6px; background: url("natal-sino.png") 0 0 / 22px 22px no-repeat; image-rendering: pixelated; transform-origin: top center; animation: natalSino 5s ease-in-out infinite; }
+.natal-sinos i + i { animation-delay: .18s; }
+@keyframes natalSino { 0%, 70%, 100% { transform: rotate(0); } 74% { transform: rotate(18deg); } 80% { transform: rotate(-16deg); } 86% { transform: rotate(10deg); } 92% { transform: rotate(-5deg); } }
+
+/* ---------- 12. presentes / 13. árvore com estrela (canto de baixo) ---------- */
+.natal-canto { position: fixed; right: 16px; bottom: 34px; z-index: 4; pointer-events: none; display: flex; align-items: flex-end; }
+.natal-presentes { width: 76px; height: 36px; background: url("natal-presentes.png") 0 0 / 76px 36px no-repeat; filter: drop-shadow(0 5px 5px rgba(0,0,0,.5)); }
+.natal-arvore { position: relative; width: 60px; height: 80px; margin-left: -10px; background: url("natal-arvore.png") 0 0 / 60px 80px no-repeat; filter: drop-shadow(0 6px 8px rgba(0,0,0,.55)); }
+.natal-arvore .estrela { position: absolute; left: 50%; top: -10px; width: 22px; height: 22px; margin-left: -11px; background: url("natal-estrela.png") 0 0 / 22px 22px no-repeat; image-rendering: pixelated; filter: drop-shadow(0 0 6px rgba(246,224,138,.95)); animation: natalEstrela 2.4s ease-in-out infinite; }
+@keyframes natalEstrela { 0%, 100% { filter: drop-shadow(0 0 4px rgba(246,224,138,.7)); transform: scale(1); } 50% { filter: drop-shadow(0 0 12px rgba(246,224,138,1)); transform: scale(1.12); } }
+
+/* ---------- a caixa e o voo do enfeite ---------- */
+.natal-caixa { position: fixed; z-index: 11; width: 66px; height: 84px; pointer-events: auto; cursor: pointer; }
+.natal-caixa .corpo { position: absolute; left: 0; bottom: 0; width: 66px; height: 45px; background: url("natal-caixa.png") 0 0 / 66px 45px no-repeat; image-rendering: pixelated; filter: drop-shadow(0 6px 6px rgba(0,0,0,.55)); }
+.natal-caixa .tampa { position: absolute; left: -6px; bottom: 36px; width: 78px; height: 39px; background: url("natal-tampa.png") 0 0 / 78px 39px no-repeat; image-rendering: pixelated; z-index: 1; }
+.natal-caixa.chega { animation: natalChega .55s cubic-bezier(.3, 1.6, .5, 1) both; }
+@keyframes natalChega { from { transform: translateY(-90px) scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+.natal-caixa.treme { animation: natalTreme .18s ease-in-out infinite alternate; }
+@keyframes natalTreme { from { transform: rotate(-4deg) translateY(1px); } to { transform: rotate(4deg) translateY(-1px); } }
+.natal-caixa.abre .tampa { animation: natalTampa .6s cubic-bezier(.2, .7, .4, 1) forwards; }
+@keyframes natalTampa { to { transform: translate(34px, -70px) rotate(38deg); opacity: 0; } }
+.natal-caixa.some { animation: natalSome .4s ease-in forwards; }
+@keyframes natalSome { to { transform: scale(.4) translateY(30px); opacity: 0; } }
+.natal-caixa .luz { position: absolute; left: 50%; bottom: 40px; width: 90px; height: 90px; margin-left: -45px; border-radius: 50%; background: radial-gradient(circle, rgba(255,240,180,.95), rgba(246,224,138,.35) 40%, transparent 70%); opacity: 0; pointer-events: none; }
+.natal-caixa.abre .luz { animation: natalLuz .8s ease-out forwards; }
+@keyframes natalLuz { 0% { opacity: 0; transform: scale(.3); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.6); } }
+
+.natal-faisca { position: fixed; z-index: 12; width: 7px; height: 7px; pointer-events: none; background: #fff6c8; box-shadow: 0 0 8px 2px rgba(246,224,138,.9); transform: rotate(45deg); }
+.natal-voo { position: fixed; z-index: 12; width: 40px; height: 40px; margin: -20px 0 0 -20px; pointer-events: none; display: grid; place-items: center; filter: drop-shadow(0 0 10px rgba(255,240,180,.95)); }
+.natal-voo .ic { width: 100%; height: 100%; background-repeat: no-repeat; background-position: center; background-size: contain; image-rendering: pixelated; }
+.natal-voo .ic.luzes, .natal-voo .ic.abas { background: radial-gradient(circle at 40% 35%, #fff, #ffd75e 35%, #e8505a 75%); border-radius: 50% 50% 45% 45%; width: 18px; height: 26px; box-shadow: 0 0 14px 4px #ffd75e; }
+.natal-voo .ic.neve { font: 700 34px/40px var(--sans); color: #fff; text-align: center; }
+.natal-voo .ic.neve::before { content: "❄"; }
+.natal-voo .ic.bolas { width: 26px; height: 26px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #fff 0 8%, #e8505a 30%, #7a1020); }
+.natal-voo .ic.lacos { background-image: url("natal-tampa.png"); }
+.natal-voo .ic.bengalas { background-image: url("natal-bengala.png"); }
+.natal-voo .ic.gorro, .natal-voo .ic.gorrinhos { background-image: url("natal-gorrinho.png"); }
+.natal-voo .ic.boneco { background-image: url("natal-boneco.png"); }
+.natal-voo .ic.guirlanda { background-image: url("natal-guirlanda.png"); }
+.natal-voo .ic.sinos { background-image: url("natal-sino.png"); }
+.natal-voo .ic.presentes { background-image: url("natal-presentes.png"); }
+.natal-voo .ic.arvore { background-image: url("natal-arvore.png"); }
+
+/* a decoration that just arrived */
+.natal-pop { animation: natalPop .7s cubic-bezier(.3, 1.7, .5, 1) both !important; }
+@keyframes natalPop { from { transform: scale(0); opacity: 0; } to { transform: none; opacity: 1; } }
+.natal-brilho { position: fixed; z-index: 12; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(255,246,200,.9), rgba(246,224,138,.3) 40%, transparent 70%); animation: natalLuz .9s ease-out forwards; }
+
+/* while a decoration is flying to its spot, the spot stays empty */
+body.natal-esconde-luzes .natal-luzes.topo, body.natal-esconde-neve .natal-neve, body.natal-esconde-lacos .card::after,
+body.natal-esconde-bolas .natal-bolas, body.natal-esconde-bengalas .natal-bengalas, body.natal-esconde-boneco .natal-boneco,
+body.natal-esconde-guirlanda .natal-guirlanda, body.natal-esconde-abas .natal-luzes.abas, body.natal-esconde-gorrinhos .fr-lvl::before,
+body.natal-esconde-sinos .natal-sinos, body.natal-esconde-presentes .natal-presentes, body.natal-esconde-arvore .natal-arvore { visibility: hidden; }
+body.natal-esconde-gorro .mascot-sprite.parada { background-image: url("lontrinha-parada.png"); }
+body.natal-esconde-gorro .mascot-sprite.avisando { background-image: url("lontrinha-avisando.png"); }
+body.natal-esconde-gorro .mascot-sprite.trabalhando { background-image: url("lontrinha-trabalhando.png"); }
+body.natal-esconde-gorro .mascot-sprite.comemorando { background-image: url("lontrinha-comemorando.png"); }
+body.natal-pop-lacos .card::after, body.natal-pop-gorrinhos .fr-lvl::before { animation: natalPop .7s cubic-bezier(.3, 1.7, .5, 1) both; }
+
+/* "new decoration here" dot on a tab that holds one the user hasn't seen yet */
+.tab-btn.natal-novo { position: relative; }
+.tab-btn.natal-novo::after {
+  content: "🎁"; position: absolute; top: -10px; right: -8px; font-size: 16px; line-height: 1;
+  animation: natalPulo 1s ease-in-out infinite; filter: drop-shadow(0 0 6px rgba(246,224,138,.9));
+}
+@keyframes natalPulo { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+
+/* Christmas day: a quick burst of snow over everything */
+.natal-festa { position: fixed; inset: 0; z-index: 8; pointer-events: none; overflow: hidden; }
+.natal-festa b { position: absolute; top: -12px; width: 9px; height: 9px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px #fff; animation: natalNeve var(--t) linear forwards; animation-delay: var(--d); }
