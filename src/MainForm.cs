@@ -525,7 +525,14 @@ sealed class MainForm : Form
     {
         try
         {
-            File.AppendAllText(Path.Combine(Config.DataDir, "erros.log"),
+            var file = Path.Combine(Config.DataDir, "erros.log");
+            // Offline, the market and update checks log a line every 15 minutes: keep only the newest ~100 KB.
+            if (File.Exists(file) && new FileInfo(file).Length > 200_000)
+            {
+                var lines = File.ReadAllLines(file);
+                File.WriteAllLines(file, lines[(lines.Length / 2)..]);
+            }
+            File.AppendAllText(file,
                 $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{where}] {ex.GetType().Name}: {ex.Message}{Environment.NewLine}");
         }
         catch { }

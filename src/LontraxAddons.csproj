@@ -9,7 +9,7 @@
     <AssemblyName>Lontrax Addons</AssemblyName>
     <RootNamespace>LontraxAddons</RootNamespace>
     <ApplicationIcon>..\assets\brasao.ico</ApplicationIcon>
-    <Version>1.9.0</Version>
+    <Version>1.9.1</Version>
     <Product>Lontrax Addons</Product>
     <Company>Lontrax</Company>
     <Description>Instala e atualiza os addons da galera Lontrax</Description>

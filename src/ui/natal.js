@@ -88,20 +88,44 @@
     w.appendChild(lamps);
     return w;
   }
+  // Snow on one canvas at 20 frames a second, and only while the window is in front: 46 CSS flakes
+  // kept the page redrawing 60 times a second (a third of a CPU core just for the snow).
   function neve() {
     const w = el("div", "natal-neve natal-el");
+    const cv = el("canvas");
+    w.appendChild(cv);
+    const flocos = [];
     for (let i = 0; i < 46; i++) {
-      const f = el("b");
-      const s = 2 + Math.random() * 4;
-      f.style.left = (Math.random() * 100).toFixed(2) + "%";
-      f.style.setProperty("--s", s.toFixed(1) + "px");
-      f.style.setProperty("--o", (0.35 + Math.random() * 0.5).toFixed(2));
-      f.style.setProperty("--x", (Math.random() * 60 - 30).toFixed(0) + "px");
       const t = 9 + Math.random() * 12;
-      f.style.setProperty("--t", t.toFixed(1) + "s");
-      f.style.setProperty("--d", (-Math.random() * t).toFixed(1) + "s");
-      w.appendChild(f);
+      flocos.push({ x: Math.random(), r: 1 + Math.random() * 2, o: 0.35 + Math.random() * 0.5, dx: Math.random() * 60 - 30, t, f: Math.random() });
     }
+    let ultimo = 0;
+    function quadro() {
+      if (!w.isConnected) { clearInterval(w._timer); return; }
+      const b = document.body.classList;
+      if (document.hidden || b.contains("paused") || b.contains("natal-esconde-neve")) { ultimo = 0; return; }
+      const W = w.clientWidth, H = w.clientHeight;
+      if (!W || !H) return;
+      const agora = performance.now();
+      const passo = ultimo ? Math.min(0.2, (agora - ultimo) / 1000) : 0;
+      ultimo = agora;
+      const dpr = window.devicePixelRatio || 1;
+      if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+      const g = cv.getContext("2d");
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.clearRect(0, 0, W, H);
+      g.fillStyle = "#fff";
+      const vh = innerHeight;
+      for (const f of flocos) {
+        f.f = (f.f + passo / f.t) % 1;
+        const y = -10 + f.f * (vh * 1.05 + 10);
+        const x = f.x * W + Math.sin(f.f * Math.PI) * f.dx;
+        if (y > H + 6) continue;
+        g.globalAlpha = f.o;
+        g.beginPath(); g.arc(x, y, f.r, 0, Math.PI * 2); g.fill();
+      }
+    }
+    w._timer = setInterval(quadro, 50);
     return w;
   }
   const visivel = (x) => { if (!x) return null; const r = x.getBoundingClientRect(); return r.width > 0 && r.height > 0 ? r : null; };
@@ -460,7 +484,20 @@
     if (festa()) return;
     if (estado().abertos < liberados(d, T)) abrirCaixas();
   }
-  setInterval(tick, 1000);
+  // Bells, baubles and the snowman move now and then (an endless CSS loop keeps the page redrawing).
+  let proximoMexe = Date.now() + 4000;
+  function mexer() {
+    if (Date.now() < proximoMexe || document.hidden || document.body.classList.contains("paused")) return;
+    proximoMexe = Date.now() + 5000 + Math.random() * 5000;
+    const quem = [".natal-bolas", ".natal-sinos", ".natal-boneco"].map((q) => document.querySelector(q)).filter((x) => visivel(x));
+    if (!quem.length) return;
+    const x = quem[Math.floor(Math.random() * quem.length)];
+    x.classList.remove("mexe");
+    void x.offsetWidth;
+    x.classList.add("mexe");
+    setTimeout(() => x.classList.remove("mexe"), 2800);
+  }
+  setInterval(() => { tick(); if (montado) mexer(); }, 1000);
   tick();
   window.lontraxNatal = { abrir: abrirCaixas, estado, liberados: () => liberados(agora(), T), agora };
 })();
