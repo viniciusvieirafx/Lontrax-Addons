@@ -136,7 +136,7 @@
     luzes() { const top = document.querySelector("#view-main .top"); let w = top.querySelector(".natal-luzes.topo"); if (!w) { w = luzes("topo", 34); top.appendChild(w); } return w; },
     neve() { const sky = document.querySelector(".sky"); let w = sky.querySelector(".natal-neve"); if (!w) { w = neve(); sky.appendChild(w); } return null; },
     lacos() { document.body.classList.add("natal-lacos"); return firstVisible("#grid .card"); },
-    bolas() { let w = document.querySelector(".natal-bolas"); if (!w) { w = el("div", "natal-bolas natal-el", "<span></span><span></span><span></span>"); $("view-main").appendChild(w); } return w.children[1]; },
+    bolas() { let w = document.querySelector(".natal-bolas"); if (!w) { w = el("div", "natal-bolas natal-el", "<span></span><span></span><span></span>"); $("view-main").appendChild(w); posBolas(); } return w.children[1]; },
     bengalas() {
       let w = document.querySelector(".natal-bengalas");
       const bar = document.querySelector("#ah-main .ah-bar");
@@ -497,7 +497,28 @@
     x.classList.add("mexe");
     setTimeout(() => x.classList.remove("mexe"), 2800);
   }
-  setInterval(() => { tick(); if (montado) mexer(); }, 1000);
+  // The baubles hang just right of the countdown (its place moves with the window width: on a narrow or
+  // vertical monitor a fixed spot ended up on top of the numbers).
+  // When the window is too narrow for that, they hang from the string of lights on the right instead.
+  function posBolas() {
+    const b = document.querySelector(".natal-bolas"), r = visivel($("natal-conta"));
+    if (!b || !r) return;
+    const depois = [visivel($("mascot-sprite")), visivel(document.querySelector("#view-main .user, #view-main .who"))]
+      .filter((x) => x && x.left > r.left).map((x) => x.left);
+    const livre = Math.min(innerWidth, ...depois) - r.right;
+    const fio = visivel(document.querySelector(".natal-luzes.topo"));
+    if (livre >= 100 || !fio) {
+      b.classList.remove("baixo");
+      b.style.top = "";
+      b.style.left = Math.round(r.right + 14) + "px";
+    } else {
+      b.classList.add("baixo");
+      b.style.top = Math.round(fio.top + 4) + "px";
+      b.style.left = Math.round(innerWidth - 150) + "px";
+    }
+  }
+  addEventListener("resize", posBolas);
+  setInterval(() => { tick(); if (montado) { posBolas(); mexer(); } }, 1000);
   tick();
   window.lontraxNatal = { abrir: abrirCaixas, estado, liberados: () => liberados(agora(), T), agora };
 })();
