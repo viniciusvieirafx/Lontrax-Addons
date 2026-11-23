@@ -137,8 +137,8 @@ body.natal-gorrinhos .fr-lvl::before {
 .natal-caixa.abre .luz { animation: natalLuz .8s ease-out forwards; }
 @keyframes natalLuz { 0% { opacity: 0; transform: scale(.3); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.6); } }
 
-.natal-faisca { position: fixed; z-index: 12; width: 7px; height: 7px; pointer-events: none; background: #fff6c8; box-shadow: 0 0 8px 2px rgba(246,224,138,.9); transform: rotate(45deg); }
-.natal-voo { position: fixed; z-index: 12; width: 40px; height: 40px; margin: -20px 0 0 -20px; pointer-events: none; display: grid; place-items: center; filter: drop-shadow(0 0 10px rgba(255,240,180,.95)); }
+.natal-faisca { position: fixed; z-index: 31; width: 7px; height: 7px; pointer-events: none; background: #fff6c8; box-shadow: 0 0 8px 2px rgba(246,224,138,.9); transform: rotate(45deg); }
+.natal-voo { position: fixed; z-index: 31; width: 40px; height: 40px; margin: -20px 0 0 -20px; pointer-events: none; display: grid; place-items: center; filter: drop-shadow(0 0 10px rgba(255,240,180,.95)); }
 .natal-voo .ic { width: 100%; height: 100%; background-repeat: no-repeat; background-position: center; background-size: contain; image-rendering: pixelated; }
 .natal-voo .ic.luzes, .natal-voo .ic.abas { background: radial-gradient(circle at 40% 35%, #fff, #ffd75e 35%, #e8505a 75%); border-radius: 50% 50% 45% 45%; width: 18px; height: 26px; box-shadow: 0 0 14px 4px #ffd75e; }
 .natal-voo .ic.neve { font: 700 34px/40px var(--sans); color: #fff; text-align: center; }
@@ -153,10 +153,32 @@ body.natal-gorrinhos .fr-lvl::before {
 .natal-voo .ic.presentes { background-image: url("natal-presentes.png"); }
 .natal-voo .ic.arvore { background-image: url("natal-arvore.png"); }
 
+/* ---------- the big gift in the middle of the window, waiting for the user ---------- */
+.natal-palco { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; padding: 16px; user-select: none; animation: npEntra .45s ease-out both; }
+.natal-palco::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(circle at 50% 50%, rgba(60,36,10,.6), rgba(6,9,16,.86) 65%); transition: opacity .6s ease; }
+@keyframes npEntra { from { opacity: 0; } }
+.natal-palco.voando { pointer-events: none; }
+.natal-palco.voando::before, .natal-palco.voando .np-tit, .natal-palco.aberto .np-dica { opacity: 0; }
+.natal-palco.sai { opacity: 0; transition: opacity .45s ease; }
+.np-tit { font: 800 clamp(22px, 4vw, 34px)/1.15 var(--sans); color: #ffe9a8; text-align: center; text-shadow: 0 2px 0 #5a2a00, 0 0 18px rgba(246,224,138,.55); transition: opacity .4s; }
+.np-lugar { position: relative; width: 172px; height: 218px; }
+.np-lugar::before { content: ""; position: absolute; left: 50%; top: 58%; width: 340px; height: 340px; margin: -170px 0 0 -170px; border-radius: 50%; background: radial-gradient(circle, rgba(246,224,138,.28), transparent 65%); pointer-events: none; }
+.np-caixa { position: absolute; left: 0; top: 0; width: 66px; height: 84px; transform: scale(2.6); transform-origin: 0 0; }
+.natal-palco .natal-caixa { position: relative; z-index: auto; cursor: grab; outline: none; touch-action: none; }
+.natal-palco .natal-caixa:active { cursor: grabbing; }
+.natal-caixa.balanca { animation: npBalanca .7s ease-in-out; transform-origin: 50% 100%; }
+@keyframes npBalanca { 20% { transform: rotate(-6deg); } 40% { transform: rotate(6deg); } 60% { transform: rotate(-4deg); } 80% { transform: rotate(2deg); } }
+.np-qtd { position: absolute; right: -22px; top: 70px; background: #e8505a; color: #fff; font: 800 20px/1 var(--sans); padding: 6px 11px; border-radius: 16px; border: 2px solid #ffd75e; box-shadow: 0 4px 10px rgba(0,0,0,.5); }
+.natal-palco.aberto .np-qtd { opacity: 0; transition: opacity .3s; }
+.np-dica { font: 600 16px var(--sans); color: #f3e6c4; background: rgba(0,0,0,.45); border: 1px solid rgba(217,180,90,.35); padding: 8px 16px; border-radius: 20px; text-align: center; transition: opacity .3s; }
+.np-seta { display: inline-block; color: #ffd75e; }
+.np-dica.pisca .np-seta { animation: npSeta .7s ease-in-out 2; }
+@keyframes npSeta { 50% { transform: translateY(-6px); } }
+
 /* a decoration that just arrived */
 .natal-pop { animation: natalPop .7s cubic-bezier(.3, 1.7, .5, 1) both !important; }
 @keyframes natalPop { from { transform: scale(0); opacity: 0; } to { transform: none; opacity: 1; } }
-.natal-brilho { position: fixed; z-index: 12; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(255,246,200,.9), rgba(246,224,138,.3) 40%, transparent 70%); animation: natalLuz .9s ease-out forwards; }
+.natal-brilho { position: fixed; z-index: 31; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(255,246,200,.9), rgba(246,224,138,.3) 40%, transparent 70%); animation: natalLuz .9s ease-out forwards; }
 
 /* while a decoration is flying to its spot, the spot stays empty */
 body.natal-esconde-luzes .natal-luzes.topo, body.natal-esconde-neve .natal-neve, body.natal-esconde-lacos .card::after,

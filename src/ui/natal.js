@@ -170,7 +170,7 @@
       if (x.classList.contains("natal-foot")) { x.parentNode.insertBefore($("foot-text"), x); }
       x.remove();
     });
-    document.querySelectorAll(".natal-neve, .natal-caixa, .natal-voo, .natal-festa").forEach((x) => x.remove());
+    document.querySelectorAll(".natal-neve, .natal-caixa, .natal-voo, .natal-festa, .natal-palco").forEach((x) => x.remove());
     document.body.classList.remove("natal", "natal-lacos", "natal-gorro", "natal-gorrinhos");
     document.querySelectorAll(".tab-btn.natal-novo").forEach((b) => b.classList.remove("natal-novo"));
   }
@@ -225,14 +225,14 @@
   }
 
   // ---------- the box ----------
-  function faiscas(x, y, n) {
+  function faiscas(x, y, n, tam = 1) {
     for (let i = 0; i < n; i++) {
       const f = el("div", "natal-faisca");
       f.style.left = x + "px";
       f.style.top = y + "px";
       document.body.appendChild(f);
       const a = (Math.PI * 2 * i) / n + Math.random() * 0.4;
-      const r = 40 + Math.random() * 40;
+      const r = (40 + Math.random() * 40) * tam;
       f.animate([{ transform: "translate(0,0) rotate(45deg) scale(1)", opacity: 1 }, { transform: `translate(${Math.cos(a) * r}px, ${Math.sin(a) * r - 20}px) rotate(45deg) scale(.2)`, opacity: 0 }],
         { duration: 650 + Math.random() * 300, easing: "cubic-bezier(.2,.7,.4,1)", fill: "forwards" }).finished.then(() => f.remove());
     }
@@ -286,29 +286,78 @@
   }
 
   let ocupado = false;
-  async function abrirUma(e, n, total, rapido) {
-    const m = M();
-    const k = rapido ? 0.55 : 1;
-    const sp = $("mascot-sprite").getBoundingClientRect();
-    const box = el("div", "natal-caixa chega", '<div class="luz"></div><div class="corpo"></div><div class="tampa"></div>');
-    box.style.left = Math.round(sp.left + 9) + "px";
-    box.style.top = Math.round(sp.bottom - 10) + "px";
-    box.title = "Uma caixa de Natal!";
-    document.body.appendChild(box);
-    let pressa = false;
-    box.addEventListener("click", () => (pressa = true));
-    if (n === 0) m.fala("avisando", total > 1 ? `Chegaram ${total} caixas de Natal!` : "Chegou uma caixa de Natal!");
-    await sleep(600 * k);
-    if (n === 0 && !rapido) await sleep(900);
-    m.fala("trabalhando", null);
-    box.className = "natal-caixa treme";
-    await sleep(pressa ? 200 : 950 * k);
-    box.className = "natal-caixa abre";
-    const br = box.getBoundingClientRect();
-    const x0 = br.left + br.width / 2, y0 = br.top + 30;
-    faiscas(x0, y0, 12);
-    await sleep(220);
+  // The gift waits big in the middle of the window until the user pulls its lid up with the mouse
+  // (a small box next to the otter played by itself and most people missed it).
+  // Clicks shake it and show how; the third click, Enter or Space open it too.
+  function palco(total) {
+    return new Promise((ok) => {
+      const p = el("div", "natal-palco",
+        `<div class="np-tit">${total > 1 ? `Chegaram ${total} presentes de Natal!` : "Chegou um presente de Natal!"}</div>` +
+        `<div class="np-lugar"><div class="np-caixa"><div class="natal-caixa chega" tabindex="0" title="Puxe a tampa para cima"><div class="luz"></div><div class="corpo"></div><div class="tampa"></div></div></div>` +
+        (total > 1 ? `<b class="np-qtd">×${total}</b>` : "") + `</div>` +
+        `<div class="np-dica"><span class="np-seta">⬆</span> Puxe a tampa para cima com o mouse</div>`);
+      document.body.appendChild(p);
+      const box = p.querySelector(".natal-caixa"), tampa = box.querySelector(".tampa"), dica = p.querySelector(".np-dica");
+      const K = 2.6; // .np-caixa scale
+      const PUXA = 90; // screen pixels up to open
+      let y0 = null, puxou = 0, cliques = 0, aberto = false;
+      const sacode = () => {
+        box.classList.remove("chega", "balanca");
+        void box.offsetWidth;
+        box.classList.add("balanca");
+        dica.classList.remove("pisca");
+        void dica.offsetWidth;
+        dica.classList.add("pisca");
+      };
+      const lembrete = setInterval(() => {
+        if (!p.isConnected) { clearInterval(lembrete); ok(null); return; } // decorations switched off while it waited
+        if (y0 == null && !document.hidden) sacode();
+      }, 4000);
+      const abrir = () => {
+        if (aberto) return;
+        aberto = true;
+        clearInterval(lembrete);
+        box.classList.remove("chega", "balanca");
+        box.classList.add("abre");
+        p.classList.add("aberto");
+        const r = box.getBoundingClientRect();
+        const x = r.left + r.width / 2, y = r.top + r.height * 0.45;
+        faiscas(x, y, 26, 2.2);
+        ok({ x, y, el: p, fechar:() => { box.classList.add("some"); p.classList.add("sai"); setTimeout(() => p.remove(), 500); } });
+      };
+      box.addEventListener("pointerdown", (ev) => {
+        if (aberto) return;
+        y0 = ev.clientY;
+        puxou = 0;
+        box.setPointerCapture(ev.pointerId);
+        tampa.style.transition = "none";
+      });
+      box.addEventListener("pointermove", (ev) => {
+        if (y0 == null || aberto) return;
+        puxou = Math.max(0, Math.min(PUXA * 1.2, y0 - ev.clientY));
+        const u = puxou / K;
+        tampa.style.transform = `translate(${u * 0.25}px, ${-u}px) rotate(${u * 0.35}deg)`;
+        box.style.transform = `rotate(${Math.sin(puxou / 6) * puxou / 60}deg)`;
+        if (puxou >= PUXA) { y0 = null; box.style.transform = ""; abrir(); }
+      });
+      const solta = () => {
+        if (y0 == null || aberto) return;
+        y0 = null;
+        box.style.transform = "";
+        tampa.style.transition = "transform .25s cubic-bezier(.3, 1.6, .5, 1)";
+        tampa.style.transform = "";
+        if (puxou < 6 && ++cliques >= 3) abrir();
+        else if (puxou < 6) sacode();
+      };
+      box.addEventListener("pointerup", solta);
+      box.addEventListener("pointercancel", solta);
+      box.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); abrir(); } });
+      setTimeout(() => { if (!aberto) box.focus({ preventScroll: true }); }, 600);
+    });
+  }
 
+  // one decoration flies from (x0, y0) to its spot
+  async function soltar(e, x0, y0, k) {
     // where it goes: its spot, or the tab button when it lives in a tab the user isn't on
     const montar = MONTA[e.id];
     document.body.classList.add("natal");
@@ -336,22 +385,7 @@
     }
     s.abertos = Math.max(s.abertos, ENFEITES.indexOf(e) + 1);
     salvar(s);
-
-    box.className = "natal-caixa some";
-    setTimeout(() => box.remove(), 450);
-    const ultima = n === total - 1;
-    if (!rapido || ultima) {
-      const falta = diasPara(agora(), T.natal);
-      let t;
-      if (total > 1) t = `Abri ${total} caixas!` + (s.novos.length ? " Tem enfeite novo nas abas com 🎁." : " " + e.fala);
-      else t = e.fala + (outraAba ? " Abra a aba para ver!" : "");
-      if (falta > 0) t += ` Faltam ${falta} ${falta === 1 ? "dia" : "dias"} para o Natal.`;
-      m.fala("comemorando", t, 3600);
-      await sleep(3700);
-    } else {
-      m.fala("comemorando", null);
-      await sleep(350);
-    }
+    return outraAba;
   }
 
   async function abrirCaixas() {
@@ -364,17 +398,35 @@
     ocupado = true;
     try {
       const fila = ENFEITES.slice(s.abertos, n);
-      m.segura(120000);
+      m.segura(DIA); // the gift may wait a long time for the user
       if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
         fila.forEach((e) => MONTA[e.id]());
         salvar({ abertos: n, novos: s.novos });
         m.fala("comemorando", fila[fila.length - 1].fala, 3600);
         await sleep(3700);
       } else {
+        m.fala("avisando", fila.length > 1 ? `Chegaram ${fila.length} presentes! Abre aí!` : "Chegou um presente! Abre aí!");
+        const p = await palco(fila.length);
+        if (!p) return;
+        m.fala("comemorando", null);
+        await sleep(450);
+        p.el.classList.add("voando"); // the dark backdrop fades so the decorations can be seen landing
+        let outraAba = false;
+        const rapido = fila.length > 1;
         for (let i = 0; i < fila.length; i++) {
           if (desligado()) break;
-          await abrirUma(fila[i], i, fila.length, fila.length > 1 && i < fila.length - 1);
+          outraAba = await soltar(fila[i], p.x, p.y, rapido && i < fila.length - 1 ? 0.55 : 1);
         }
+        p.fechar();
+        const s = estado(), e = fila[fila.length - 1];
+        const falta = diasPara(agora(), T.natal);
+        let t;
+        if (fila.length > 1) t = `Abri ${fila.length} presentes!` + (s.novos.length ? " Tem enfeite novo nas abas com 🎁." : " " + e.fala);
+        else t = e.fala + (outraAba ? " Abra a aba para ver!" : "");
+        if (falta > 0) t += ` Faltam ${falta} ${falta === 1 ? "dia" : "dias"} para o Natal.`;
+        m.segura(3800);
+        m.fala("comemorando", t, 3600);
+        await sleep(3700);
       }
     } finally {
       ocupado = false;
@@ -452,8 +504,23 @@
   // ---------- main loop ----------
   let montado = false;
   let mainDesde = 0;
+  let mexeuEm = 0;
+  ["pointermove", "pointerdown", "keydown", "wheel"].forEach((t) => addEventListener(t, () => (mexeuEm = Date.now()), { passive: true, capture: true }));
+  // (the host sets "paused" when the window is not in front; hasFocus() can be false in WebView2 until a click)
+  const presente = () => !document.hidden && !document.body.classList.contains("paused") && Date.now() - mexeuEm < 8000;
   let pausaAte = 0;
   function montarTudo() {
+    // 1.9.3 brought the big gift: the newest box comes back once so everyone gets to open it (many missed the old one)
+    const rever = chave() + ".rever193";
+    if (get(rever) !== "1") {
+      put(rever, "1");
+      const r = estado(), n = liberados(agora(), T);
+      if (n > 0 && r.abertos >= n) {
+        r.abertos = n - 1;
+        r.novos = r.novos.filter((id) => id !== ENFEITES[n - 1].id);
+        salvar(r);
+      }
+    }
     const s = estado();
     document.body.classList.add("natal");
     ENFEITES.slice(0, s.abertos).forEach((e) => MONTA[e.id]());
@@ -479,7 +546,8 @@
     // the Mercado bar exists only after the Mercado opens: mount the candy canes when it shows up
     if (estado().abertos >= 5 && !document.querySelector(".natal-bengalas")) MONTA.bengalas();
     atualizarConta();
-    const pronto = Date.now() - mainDesde > 1500 && !document.hidden && !document.body.classList.contains("paused") && !$("mascot").hidden && M() && !M().ocupada();
+    // only for someone who is really there: window in front and the mouse or keyboard used in the last few seconds
+    const pronto = Date.now() - mainDesde > 1500 && presente() && !$("mascot").hidden && M() && !M().ocupada();
     if (!pronto || ocupado || Date.now() < pausaAte) return;
     if (festa()) return;
     if (estado().abertos < liberados(d, T)) abrirCaixas();
