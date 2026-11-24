@@ -360,6 +360,14 @@ sealed class MainForm : Form
                 // ---------- Amigos ----------
                 case "amigos": await SendFriends(refreshApi: true); break;
 
+                // ---------- Kills (Lontrax Dog Tags) ----------
+                case "kills":
+                    {
+                        var (chars, found, updated) = DogTags.Read(settings.AddOnsPath);
+                        Post(new { type = "kills", chars, achou = found, addon = DogTags.AddonState(settings.AddOnsPath), atualizado = updated?.ToString("dd/MM HH:mm") });
+                        break;
+                    }
+
                 // ---------- Mercado ----------
                 case "ahInit":
                     // English names for the PT | EN toggle (sent as raw JSON, parsed by the page).

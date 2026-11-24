@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="app.css">
 <link rel="stylesheet" href="market.css">
 <link rel="stylesheet" href="amigos.css">
+<link rel="stylesheet" href="kills.css">
 <link rel="stylesheet" href="natal.css">
 </head>
 <body>
@@ -90,6 +91,7 @@
     <button class="tab-btn active" data-tab="addons" role="tab">Addons</button>
     <button class="tab-btn" data-tab="mercado" role="tab">Mercado <span class="tab-sub">Casa de Leilões</span></button>
     <button class="tab-btn" data-tab="amigos" role="tab">Amigos <span class="tab-sub">quem está upando</span></button>
+    <button class="tab-btn" data-tab="kills" role="tab">Kills <span class="tab-sub">dog tags</span></button>
   </nav>
 
   <!-- ===================== Amigos ===================== -->
@@ -116,6 +118,31 @@
     </div>
     <div class="fr-empty" id="fr-empty" hidden></div>
     <div class="fr-grid" id="fr-grid"></div>
+  </div>
+
+  <!-- ===================== Kills (Lontrax Dog Tags) ===================== -->
+  <div class="tab-pane" id="tab-kills" hidden>
+    <div class="kl-chars" id="kl-chars" role="tablist" aria-label="Seus personagens"></div>
+    <div class="kl-top">
+      <div class="kl-stats" id="kl-stats"></div>
+      <div class="kl-tools">
+        <input id="kl-search" class="fr-search" type="search" placeholder="Buscar nome…" aria-label="Buscar jogador pelo nome">
+        <div class="tabs-mini" id="kl-view">
+          <button data-v="feed" class="on" type="button">Feed</button>
+          <button data-v="tags" type="button">Coleção</button>
+          <button data-v="rivais" type="button">Rivais</button>
+        </div>
+        <select id="kl-sort" class="fr-sort" aria-label="Ordenar a coleção">
+          <option value="recente">Mais recentes</option>
+          <option value="kills">Mais kills</option>
+          <option value="raridade">Raridade</option>
+          <option value="nome">Nome</option>
+        </select>
+      </div>
+    </div>
+    <div class="fr-empty" id="kl-empty" hidden></div>
+    <div id="kl-body"></div>
+    <div class="kl-when" id="kl-when"></div>
   </div>
 
   <!-- ===================== Mercado ===================== -->
@@ -305,6 +332,7 @@
 <script src="app.js"></script>
 <script src="market.js"></script>
 <script src="amigos.js"></script>
+<script src="kills.js"></script>
 <script src="natal.js"></script>
 </body>
 </html>

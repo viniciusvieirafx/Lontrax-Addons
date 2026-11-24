@@ -597,7 +597,7 @@
   });
 
   // Remember the last tab (Mercado opens straight away if you were there).
-  showTab(["mercado", "amigos"].includes(LS("lontrax.tab")) ? LS("lontrax.tab") : "addons");
+  showTab(["mercado", "amigos", "kills"].includes(LS("lontrax.tab")) ? LS("lontrax.tab") : "addons");
 
   // ---------- preview in a normal browser (no app host): sample data ----------
   if (!host) {
