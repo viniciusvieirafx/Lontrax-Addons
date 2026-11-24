@@ -96,10 +96,10 @@
           <div class="fr-status">${status}</div>
           ${spark(f.historico, max)}
           ${f.nota ? `<div class="fr-note">“${esc(f.nota)}”</div>` : ""}
-          ${f.eu ? "" : `<div class="fr-actions">
-            <button type="button" class="fr-act fav${favs.has(f.slug) ? " on" : ""}" data-act="fav" data-slug="${esc(f.slug)}">${favs.has(f.slug) ? "★ Favorito" : "☆ Favoritar"}</button>
+          <div class="fr-actions">
+            ${f.eu ? "" : `<button type="button" class="fr-act fav${favs.has(f.slug) ? " on" : ""}" data-act="fav" data-slug="${esc(f.slug)}">${favs.has(f.slug) ? "★ Favorito" : "☆ Favoritar"}</button>`}
             <button type="button" class="fr-act hide" data-act="hide" data-slug="${esc(f.slug)}">${hidden.has(f.slug) ? "Mostrar de novo" : "Esconder"}</button>
-          </div>`}
+          </div>
         </div>
       </article>`;
   }
@@ -135,7 +135,7 @@
     empty.hidden = true;
     fillClasses(list);
     const friends = list.filter((f) => !f.eu && !hidden.has(f.slug));
-    const nHidden = list.filter((f) => !f.eu && hidden.has(f.slug)).length;
+    const nHidden = list.filter((f) => hidden.has(f.slug)).length;
     const online = friends.filter((f) => f.online).length;
     const up = friends.filter((f) => f.ganhou7 > 0).length;
     sum.innerHTML = `<b>${friends.length}</b> ${friends.length === 1 ? "amigo" : "amigos"} · <b>${online}</b> online · <b>${up}</b> upando esta semana` + (nHidden ? ` · <b>${nHidden}</b> ${nHidden === 1 ? "escondido" : "escondidos"}` : "") +
@@ -244,6 +244,7 @@
         { nome: "Lunara", nivel: 18, classe: "Sacerdote", classeEn: "PRIEST", raca: "Humano", online: false, visto: Date.now() / 1000 - 3600 * 5, ganhou7: 0, ganhou30: 0, nota: "tank da quarta", bnet: true, historico: [] },
       ],
     };
+    data.lista.forEach((f) => { f.slug ??= (f.sobrenome ? f.nome + "-" + f.sobrenome : f.nome).toLowerCase(); });
     document.addEventListener("lontrax-tab", () => render());
     render();
   }
