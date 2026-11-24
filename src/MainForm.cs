@@ -838,8 +838,26 @@ sealed class MainForm : Form
             });
             if (refreshApi && list.Count > 0 && await friends.RefreshApi(market.Api, list.Select(f => f.slug)))
                 await SendFriends(refreshApi: false);
+            if (found) await SendFriendsList(list);
         }
         catch (Exception ex) { LogError("amigos", ex); }
+    }
+
+    /// <summary>Owner only (has the Blizzard key): keeps the Mercado's shared character list = the in-game friends list.</summary>
+    async Task SendFriendsList(List<Friends.Friend>? list = null)
+    {
+        if (!market.Api.HasKeys) return;
+        try
+        {
+            if (list == null)
+            {
+                var (l, found, _) = friends.Read(settings.AddOnsPath);
+                if (!found) return;
+                list = l;
+            }
+            await FriendsList.Sync(list);
+        }
+        catch (Exception ex) { LogError("amigosLista", ex); }
     }
     readonly System.Windows.Forms.Timer marketTimer = new() { Interval = 15 * 60 * 1000 };
     bool marketBusy;
@@ -979,6 +997,7 @@ sealed class MainForm : Form
             await MarketTick(manual: false);
         else if (SendPricesToGame()) SendMarketState();
         if (market.RecipesStale) await RefreshRecipesQuietly();
+        await SendFriendsList();
     }
 
     bool recipesRefreshing;
@@ -1022,6 +1041,7 @@ sealed class MainForm : Form
         if (fresh || manual) SendMarketRows();
         if (manual && !fresh) Post(new { type = "ahInfo", text = "Os preços já estão em dia. A Blizzard atualiza mais ou menos de hora em hora." });
         if (fresh) MarketAlert(h);
+        await SendFriendsList();
     }
 
     void MarketAlert(int house)
