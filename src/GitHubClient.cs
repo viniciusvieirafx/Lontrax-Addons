@@ -137,6 +137,20 @@ sealed class GitHubClient
         return new CommitInfo((string)j["sha"]!, msg, date);
     }
 
+    /// <summary>The last <paramref name="n"/> commits of a branch, newest first (first line of each message).</summary>
+    public async Task<List<CommitInfo>> GetCommits(string repo, string gitRef, int n)
+    {
+        using var res = await Send(Api($"/repos/{repo}/commits?sha={Uri.EscapeDataString(gitRef)}&per_page={n}"));
+        var list = new List<CommitInfo>();
+        foreach (var j in JsonNode.Parse(await res.Content.ReadAsStringAsync())!.AsArray())
+        {
+            var msg = ((string?)j?["commit"]?["message"] ?? "").Split('\n')[0];
+            var date = DateTimeOffset.TryParse((string?)j?["commit"]?["committer"]?["date"], out var d) ? d : DateTimeOffset.MinValue;
+            list.Add(new CommitInfo((string)j!["sha"]!, msg, date));
+        }
+        return list;
+    }
+
     public sealed record ReleaseInfo(Version Version, string Tag, long AssetId, string AssetName);
 
     /// <summary>Latest release of the app (its .exe is attached as an asset).</summary>

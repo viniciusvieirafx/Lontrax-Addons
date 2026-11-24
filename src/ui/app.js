@@ -155,6 +155,7 @@
         if (it.status === "erro") return send("refresh");
         send("install", { id: it.id });
       });
+      c.querySelector(".news-btn").addEventListener("click", () => abrirNovidades(it));
       const rm = c.querySelector(".remove-btn");
       rm.hidden = it.status === "nao_instalado" || it.status === "erro" || it.obrigatorio;
       rm.addEventListener("click", () => {
@@ -171,6 +172,61 @@
     const ok = items.filter((x) => x.status === "atualizado").length;
     $("foot-text").textContent = items.length ? `${ok} de ${items.length} addons em dia · Pela Aliança!` : "Pela Aliança!";
   }
+
+  // ---------- Novidades: what changed in an addon ----------
+  // From the repo's NOVIDADES.md ("## 1.4.2 · 23/11/2026" headers, "- " items, **bold**) or, when it has none,
+  // its last commits. What came after the installed version is marked "novo".
+  let novidadesDe = null;
+  function abrirNovidades(it) {
+    novidadesDe = it.id;
+    $("novidades-tit").textContent = "Novidades · " + (it.nome || it.id);
+    $("novidades-body").innerHTML = '<p class="waiting"><span class="spinner"></span> Buscando as novidades…</p>';
+    $("novidades").hidden = false;
+    if (host) send("novidades", { id: it.id });
+    else setTimeout(() => mostrarNovidades(DEMO_NOVIDADES(it)), 400);
+  }
+  function fecharNovidades() { novidadesDe = null; $("novidades").hidden = true; }
+  $("novidades-close").addEventListener("click", fecharNovidades);
+  $("novidades").addEventListener("click", (ev) => { if (ev.target === $("novidades")) fecharNovidades(); });
+  addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !$("novidades").hidden) fecharNovidades(); });
+  const escN = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const negrito = (t) => escN(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/`(.+?)`/g, "<code>$1</code>");
+  function dataDoTitulo(t) {
+    const d = t.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    return d ? `${d[3]}-${d[2].padStart(2, "0")}-${d[1].padStart(2, "0")}` : null;
+  }
+  function mostrarNovidades(m) {
+    if (m.id !== novidadesDe) return;
+    const body = $("novidades-body");
+    if (m.erro) { body.innerHTML = `<p class="note">Não consegui buscar as novidades agora. ${escN(m.erro)}</p>`; return; }
+    let h = "";
+    if (m.md) {
+      let lista = false;
+      const fecha = () => { if (lista) { h += "</ul>"; lista = false; } };
+      for (const raw of m.md.split(/\r?\n/)) {
+        const l = raw.trim();
+        if (!l || l.startsWith("# ")) { fecha(); continue; }
+        if (l.startsWith("## ")) {
+          fecha();
+          const t = l.slice(3), d = dataDoTitulo(t);
+          const novo = m.instalado && d && d >= m.instalado;
+          h += `<h4 class="nv-ver">${negrito(t)}${novo ? ' <span class="nv-novo">novo</span>' : ""}</h4>`;
+        } else if (l.startsWith("### ")) { fecha(); h += `<h5 class="nv-sub">${negrito(l.slice(4))}</h5>`; }
+        else if (/^[-*] /.test(l)) { if (!lista) { h += "<ul>"; lista = true; } h += `<li>${negrito(l.slice(2))}</li>`; }
+        else { fecha(); h += `<p>${negrito(l)}</p>`; }
+      }
+      fecha();
+    } else if (m.commits && m.commits.length) {
+      h += '<p class="nv-obs">Este addon ainda não tem uma lista de novidades. Estas são as últimas mudanças enviadas:</p><ul class="nv-commits">';
+      for (const c of m.commits) h += `<li><span class="nv-data">${escN(c.data)}</span> ${escN(c.msg)}${c.novo ? ' <span class="nv-novo">novo</span>' : ""}</li>`;
+      h += "</ul>";
+    } else h = '<p class="note">Nada por aqui ainda.</p>';
+    body.innerHTML = h;
+    body.scrollTop = 0;
+  }
+  const DEMO_NOVIDADES = (it) => it.id === "mf"
+    ? { id: it.id, instalado: "2026-11-20", md: "# Novidades\n\n## 1.4.2 · 23/11/2026\n### Modo Simples\n- O `/mf` abre numa página **simples** com o básico.\n- Estilos prontos: **MF Style**, **Moderno** e **Clássico**.\n### Alvo\n- O seu alvo pode ter setas, brilho e borda.\n\n## 1.4.0 · 15/11/2026\n- Bicho de missão confere o tipo da criatura." }
+    : { id: it.id, commits: [{ msg: "Corrige a seta no mapa", data: "22/11/2026", novo: true }, { msg: "v4.4.1", data: "01/11/2026", novo: false }] };
 
   // Soft click for buttons inside the app (made on the fly, no sound file).
   let actx = null;
@@ -256,6 +312,9 @@
           if (c) c.querySelector(".progress").hidden = true;
           break;
         }
+        case "novidades":
+          mostrarNovidades(m);
+          break;
         case "toast":
           toast(m.kind, m.text);
           break;

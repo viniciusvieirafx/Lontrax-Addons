@@ -272,6 +272,14 @@
 <!-- Murloc que às vezes aparece para brigar com a Lontrinha -->
 <div class="murloc" id="murloc" hidden title="Um murloc! Clique para ajudar a Lontrinha."><span class="murloc-say" hidden></span></div>
 
+<div class="modal" id="novidades" hidden>
+  <div class="plaque modal-box wide">
+    <button class="ah-close" id="novidades-close" type="button" title="Fechar">×</button>
+    <h3 class="pane-title" id="novidades-tit">Novidades</h3>
+    <div class="novidades-body" id="novidades-body"></div>
+  </div>
+</div>
+
 <template id="card-tpl">
   <article class="card">
     <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
@@ -286,7 +294,10 @@
     <div class="progress" hidden><div class="bar"></div></div>
     <div class="card-actions">
       <button class="btn gold sm main-btn"></button>
-      <button class="link small remove-btn">Remover</button>
+      <span class="card-links">
+        <button class="link small news-btn" type="button">Novidades</button>
+        <button class="link small remove-btn">Remover</button>
+      </span>
     </div>
   </article>
 </template>

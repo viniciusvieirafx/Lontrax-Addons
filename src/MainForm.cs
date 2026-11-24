@@ -343,6 +343,7 @@ sealed class MainForm : Form
                 case "updateAll": await UpdateAll(); break;
                 case "updateApp": await UpdateApp(quiet: false); break;
                 case "uninstall": Uninstall((string)m!["id"]!); break;
+                case "novidades": await SendNovidades((string)m!["id"]!); break;
                 case "pickFolder": PickFolder(); break;
                 case "setOption":
                     var opt = (string?)m!["name"];
@@ -701,6 +702,41 @@ sealed class MainForm : Form
         if (settings.AddOnsPath != null && Directory.Exists(settings.AddOnsPath)) return true;
         Toast("erro", "Não achei a pasta do WoW. Clique em \"Alterar\" e escolha a pasta AddOns.");
         return false;
+    }
+
+    /// <summary>"Novidades" of an addon: its NOVIDADES.md (written for the friends, in Portuguese) or, when the
+    /// repo has none, its last commits. Commits after the installed one are marked new.</summary>
+    async Task SendNovidades(string id)
+    {
+        var e = catalog?.Addons.FirstOrDefault(a => a.Id == id);
+        if (e == null) return;
+        var path = settings.AddOnsPath;
+        var inst = path != null ? InstalledInfo.Read(path, e) : null;
+        var instalado = inst?.Instalado.ToString("yyyy-MM-dd");
+        try
+        {
+            string? md = null;
+            try { md = await gh.GetRawFile(e.Repo, "NOVIDADES.md", e.Ref); }
+            catch (GitHubException ex) when (ex.Status == System.Net.HttpStatusCode.NotFound) { }
+            object? commits = null;
+            if (md == null)
+            {
+                var list = await gh.GetCommits(e.Repo, e.Ref, 15);
+                var novo = inst != null; // everything before the installed commit is new (all 15 if it is older)
+                var lista = new List<object>();
+                foreach (var c in list)
+                {
+                    if (inst != null && c.Sha == inst.Sha) novo = false;
+                    lista.Add(new { msg = c.Message, data = c.Date.ToLocalTime().ToString("dd/MM/yyyy"), novo });
+                }
+                commits = lista;
+            }
+            Post(new { type = "novidades", id, nome = e.Nome, md, commits, instalado });
+        }
+        catch (Exception ex)
+        {
+            Post(new { type = "novidades", id, nome = e.Nome, erro = ex.Message });
+        }
     }
 
     async Task InstallOne(string id, bool refresh = true)
