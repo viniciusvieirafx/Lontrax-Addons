@@ -114,24 +114,25 @@ def professions(p):
     return out
 
 
-def guild_characters(tok, guild):
-    """Professions (level + known recipes) of every guild member from level 10 up."""
+def list_characters(tok, path):
+    """Professions (level + known recipes) of the characters in the owner's in-game friends list.
+    The owner's app sends that list to the "amigos" branch (src/FriendsList.cs); the workflow passes it here."""
     from concurrent.futures import ThreadPoolExecutor
-    roster = get_profile(tok, f"/data/wow/guild/{guild}/roster")
-    if not roster:
-        print(f"guilda {guild}: lista não encontrada", flush=True)
+    try:
+        names = json.load(open(path, encoding="utf-8")).get("personagens", {})
+    except Exception as e:
+        print(f"lista de amigos: não li ({e})", flush=True)
         return {}
-    members = [m["character"] for m in roster.get("members", []) if m["character"].get("level", 0) >= 10]
 
-    def one(c):
-        return c, professions(get_profile(tok, f"/profile/wow/character/{c['slug']}/professions"))
+    def one(slug):
+        return slug, professions(get_profile(tok, f"/profile/wow/character/{slug}/professions"))
 
     chars = {}
     with ThreadPoolExecutor(12) as ex:
-        for c, profs in ex.map(one, members):
+        for slug, profs in ex.map(one, names):
             if profs:
-                chars[c["slug"]] = {"nome": f"{c['name']} {c.get('surname', '')}".strip(), "nivel": c.get("level", 0), "profissoes": profs}
-    print(f"guilda {guild}: {len(members)} membros nível 10+, {len(chars)} com profissão", flush=True)
+                chars[slug] = {"nome": names[slug], "profissoes": profs}
+    print(f"lista de amigos: {len(names)} personagens, {len(chars)} com profissão", flush=True)
     return chars
 
 
@@ -204,12 +205,11 @@ def main(out, prev_dir=None):
                 json.dump(history(prev_dir, h, snap, items), f, separators=(",", ":"))
         resumo.append({"casa": h, "itens": len(snap["Prices"]), "atualizado": snap["LastModified"]})
         print(f"casa {h}: {len(snap['Prices'])} itens, Blizzard {snap['LastModified']}", flush=True)
-    # Character sheets of the guild (profession level + known recipes), so friends without a key can
-    # filter the Mercado by what their character can craft.
-    guild = os.environ.get("GUILDA", "made-in-brazil")
-    chars = guild_characters(tok, guild)
+    # Character sheets (profession level + known recipes) of the owner's friends list, so friends without a
+    # key can filter the Mercado by what their character can craft.
+    chars = list_characters(tok, os.environ.get("AMIGOS", ""))
     with open(os.path.join(out, "personagens.json"), "w", encoding="utf-8") as f:
-        json.dump({"gerado": datetime.datetime.now(datetime.timezone.utc).isoformat(), "guilda": guild, "personagens": chars},
+        json.dump({"gerado": datetime.datetime.now(datetime.timezone.utc).isoformat(), "lista": "amigos", "personagens": chars},
                   f, ensure_ascii=False, separators=(",", ":"))
     with open(os.path.join(out, "resumo.json"), "w", encoding="utf-8") as f:
         json.dump({"gerado": datetime.datetime.now(datetime.timezone.utc).isoformat(), "casas": resumo}, f, indent=1)

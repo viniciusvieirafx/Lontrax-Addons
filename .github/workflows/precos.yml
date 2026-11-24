@@ -29,8 +29,15 @@ jobs:
             git archive FETCH_HEAD | tar -x -C "$RUNNER_TEMP/anterior"
           fi
 
+      - name: Pega a lista de amigos (ramo amigos, enviada pelo app do dono)
+        run: |
+          if git fetch -q --depth=1 origin amigos; then
+            git show FETCH_HEAD:amigos.json > "$RUNNER_TEMP/amigos.json" || true
+          fi
+
       - name: Baixa os preços
         env:
+          AMIGOS: ${{ runner.temp }}/amigos.json
           BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
           BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
         run: python3 tools/precos.py "$RUNNER_TEMP/precos" "$RUNNER_TEMP/anterior"
