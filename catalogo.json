@@ -151,6 +151,21 @@
         "Interface"
       ],
       "obrigatorio": false
+    },
+    {
+      "id": "lontraxdogtags",
+      "nome": "Lontrax Dog Tags - Coleção de kills",
+      "descricao": "Cada jogador inimigo que você derruba vira uma dog tag colecionável, com raridade, sequência de kills, vingança e um aviso animado na tela. Também anota quem te matou. Abra a coleção com /dt ou pelo minimapa, e veja tudo na aba Kills do app.",
+      "repo": "LontraxWoW/LontraxDogTags",
+      "ref": "main",
+      "pasta": "LontraxDogTags",
+      "banner": "banner.webp",
+      "autor": "Lontrax",
+      "tags": [
+        "Coleção",
+        "PvP"
+      ],
+      "obrigatorio": false
     }
   ]
 }
