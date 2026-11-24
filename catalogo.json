@@ -136,6 +136,21 @@
         "Interface"
       ],
       "obrigatorio": false
+    },
+    {
+      "id": "lontradex",
+      "nome": "LontraDex - Enciclopédia de bichos",
+      "descricao": "Uma \"Dex\" de todos os bichos que você encontra: no primeiro encontro ela escaneia o bicho com modelo 3D, barulhinho e narrador, e conta as suas vitórias com estrelas. Tem nível de caçador, medalhas e importa sozinha o que você já tinha no WoWDex. Abra com /dex ou pelo minimapa.",
+      "repo": "LontraxWoW/LontraDex",
+      "ref": "main",
+      "pasta": "LontraDex",
+      "banner": "banner.webp",
+      "autor": "Lontrax",
+      "tags": [
+        "Coleção",
+        "Interface"
+      ],
+      "obrigatorio": false
     }
   ]
 }
