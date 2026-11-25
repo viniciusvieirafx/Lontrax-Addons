@@ -23,7 +23,9 @@
     comum: { n: 0, nome: "Comum" }, incomum: { n: 1, nome: "Incomum" }, rara: { n: 2, nome: "Rara" },
     epica: { n: 3, nome: "Épica" }, lendaria: { n: 4, nome: "Lendária" },
   };
-  const TIPO = { kill: { ic: "⚔", txt: "matou" }, assist: { ic: "✦", txt: "ajudou a matar" }, morte: { ic: "☠", txt: "foi morto por" } };
+  const TIPO = { kill: { ic: "⚔", txt: "matou" }, morte: { ic: "☠", txt: "foi morto por" } };
+  const MULTI = { 2: "Double kill", 3: "Triple kill", 4: "Quadra kill", 5: "Penta kill" };
+  const multiName = (n) => MULTI[Math.min(n, 5)] || "";
 
   let data = null;
   let timer = null;
@@ -72,9 +74,10 @@
     const best = tags.reduce((m, t) => Math.max(m, RARITY[rar(t)].n), -1);
     const stat = (n, label, cls = "") => `<div class="kl-stat ${cls}"><b>${n}</b><span>${label}</span></div>`;
     $("kl-stats").innerHTML =
-      stat(tot.kills || 0, "kills", "k") + stat(tot.assists || 0, "assists") + stat(tot.mortes || 0, "mortes", "d") +
+      stat(tot.kills || 0, "kills", "k") + stat(tot.mortes || 0, "mortes", "d") +
       stat(kd, "K/D") + stat(tags.length, tags.length === 1 ? "dog tag" : "dog tags", "t") +
       stat(tot.melhorSequencia || 0, "melhor sequência") +
+      (c.melhorMulti >= 2 ? stat(multiName(c.melhorMulti).replace(" kill", ""), "melhor kill múltiplo", "m") : "") +
       (best >= 0 ? stat(Object.values(RARITY).find((r) => r.n === best).nome, "tag mais rara", "r r-" + Object.keys(RARITY)[best]) : "");
   }
 
@@ -87,9 +90,9 @@
       return `<li class="kl-row ${esc(e.tipo || "kill")}" style="--cls:${color(e)}">
         <span class="kl-ic" title="${esc(t.txt)}">${t.ic}</span>
         <span class="kl-when-row">${esc(when(e.t))}</span>
-        <span class="kl-verb">${esc(e.tipo === "morte" ? "Morto por" : e.tipo === "assist" ? "Ajudou a matar" : "Matou")}</span>
+        <span class="kl-verb">${esc(e.tipo === "morte" ? "Morto por" : "Matou")}</span>
         ${clsIcon(e)}
-        <b class="kl-name">${esc(fullName(e))}</b>
+        <b class="kl-name">${esc(fullName(e))}${e.multi >= 2 ? ` <span class="kl-multi">${esc(multiName(e.multi))}</span>` : ""}</b>
         <span class="kl-meta">${[e.nivel ? "nível " + e.nivel : "", e.raca, e.faccao === "Horde" ? "Horda" : e.faccao === "Alliance" ? "Aliança" : ""].filter(Boolean).map(esc).join(" · ")}</span>
         <span class="kl-where">${esc([e.subzona, e.zona].filter(Boolean).join(", "))}${e.habilidade ? ` · <i>${esc(e.habilidade)}</i>` : ""}</span>
       </li>`;
@@ -115,7 +118,7 @@
         <div class="kl-tag-name">${esc(t.nome || "?")}</div>
         <div class="kl-tag-sur">${esc(t.sobrenome || "")}</div>
         <div class="kl-tag-info">${[t.nivel ? "Nv " + t.nivel : "", t.raca, t.classe].filter(Boolean).map(esc).join(" · ")}</div>
-        <div class="kl-tag-count"><span title="kills">⚔ ${t.kills || 0}</span>${t.assists ? `<span title="assists">✦ ${t.assists}</span>` : ""}${t.mortes ? `<span class="d" title="vezes que ele te matou">☠ ${t.mortes}</span>` : ""}</div>
+        <div class="kl-tag-count"><span title="kills">⚔ ${t.kills || 0}</span>${t.mortes ? `<span class="d" title="vezes que ele te matou">☠ ${t.mortes}</span>` : ""}</div>
         <div class="kl-tag-foot">${esc(date(t.primeira))}${t.zona ? " · " + esc(t.zona) : ""}</div>
       </div>`;
     }).join("")}</div>`;
@@ -140,6 +143,17 @@
     return `<ol class="kl-rivals">${list.slice(0, 50).map((r, i) => `
       <li style="--cls:${color(r)}"><span class="kl-pos">${i + 1}</span>${clsIcon(r)}<b class="kl-name">${esc(fullName(r))}</b>
         <span class="kl-score"><span class="d">☠ te matou ${r.m}×</span><span>⚔ você matou ${r.k}×</span></span></li>`).join("")}</ol>`;
+  }
+
+  // O addon (1.5.0+) não tem mais assistência: era kill. Save antigo ainda pode trazer "assist" até o jogo abrir.
+  function semAssist(d) {
+    arr(d && d.chars).forEach((c) => {
+      arr(c.feed).forEach((e) => { if (e.tipo === "assist") e.tipo = "kill"; });
+      Object.values(obj(c.tags)).forEach((t) => { t.kills = (t.kills || 0) + (t.assists || 0); t.assists = 0; });
+      const tot = obj(c.totais);
+      tot.kills = (tot.kills || 0) + (tot.assists || 0); tot.assists = 0;
+    });
+    return d;
   }
 
   const none = (msg) => `<div class="fr-none">${msg}</div>`;
@@ -196,7 +210,7 @@
   host && host.addEventListener("message", (ev) => {
     const m = ev.data;
     if (!m || m.type !== "kills") return;
-    data = m;
+    data = semAssist(m);
     render();
   });
 
@@ -213,19 +227,19 @@
       chars: [
         {
           guid: "Player-1-A", nome: "Miranajanela", sobrenome: "Lontrax", classe: "Ladino", classeEn: "ROGUE", raca: "Elfo Noturno", faccao: "Alliance", nivel: 33, atualizado: now - 600,
-          totais: { kills: 7, assists: 2, mortes: 3, melhorSequencia: 4 },
+          totais: { kills: 9, assists: 0, mortes: 3, melhorSequencia: 4 }, melhorMulti: 2,
           feed: [
             { t: now - 86400 * 3, tipo: "kill", ...k, zona: "Serra Alterac", habilidade: "Eviscerar" },
             { t: now - 86400 * 2, tipo: "morte", ...v, zona: "Vale Gurubashi", subzona: "Arena Gurubashi", habilidade: "Seta Sombria" },
             { t: now - 86400, tipo: "kill", ...g, zona: "Vale Gurubashi", habilidade: "Golpe Baixo" },
-            { t: now - 7200, tipo: "assist", ...z, zona: "Vale Gurubashi" },
-            { t: now - 3600, tipo: "kill", ...v, zona: "Vale Gurubashi", subzona: "Arena Gurubashi", habilidade: "Eviscerar" },
+            { t: now - 7200, tipo: "kill", ...z, zona: "Vale Gurubashi" },
+            { t: now - 7170, tipo: "kill", ...v, zona: "Vale Gurubashi", subzona: "Arena Gurubashi", habilidade: "Eviscerar", multi: 2 },
             { t: now - 1800, tipo: "morte", ...v, zona: "Vale Gurubashi", habilidade: "Corrupção" },
             { t: now - 900, tipo: "kill", ...g, zona: "Montanhas de Arathi", habilidade: "Apunhalar" },
           ],
           tags: {
             "Player-1-G": { ...g, kills: 2, assists: 0, mortes: 0, primeira: now - 86400, ultima: now - 900, zona: "Vale Gurubashi", raridade: "incomum" },
-            "Player-1-Z": { ...z, kills: 0, assists: 1, mortes: 0, primeira: now - 7200, ultima: now - 7200, zona: "Vale Gurubashi", raridade: "comum" },
+            "Player-1-Z": { ...z, kills: 1, assists: 0, mortes: 0, primeira: now - 7200, ultima: now - 7200, zona: "Vale Gurubashi", raridade: "comum" },
             "Player-1-V": { ...v, kills: 1, assists: 0, mortes: 2, primeira: now - 3600, ultima: now - 3600, zona: "Vale Gurubashi", raridade: "epica" },
             "Player-1-K": { ...k, kills: 1, assists: 0, mortes: 0, primeira: now - 86400 * 3, ultima: now - 86400 * 3, zona: "Serra Alterac", raridade: "lendaria" },
           },
