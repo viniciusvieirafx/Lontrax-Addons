@@ -696,6 +696,7 @@ sealed class MainForm : Form
             {
                 id = e.Id, nome = e.Nome, descricao = e.Descricao, autor = e.Autor, tags = e.Tags ?? new List<string>(),
                 repo = e.Repo, status, erro = err, obrigatorio = e.Obrigatorio,
+                lancado = e.Lancado, temBanner = !string.IsNullOrWhiteSpace(e.Banner),
                 banner = BannerFile(e) is string bf && File.Exists(Path.Combine(BannerDir, bf)) ? "https://banners.lontrax/" + bf : null,
                 instalado = inst == null ? null : new { sha = inst.Sha[..7], data = inst.Instalado.ToString("dd/MM/yyyy HH:mm") },
                 novo = c == null ? null : new { sha = c.Sha[..7], data = c.Date.ToLocalTime().ToString("dd/MM/yyyy HH:mm"), msg = c.Message },

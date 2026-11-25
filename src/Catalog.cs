@@ -26,6 +26,8 @@ sealed class CatalogEntry
     public bool Obrigatorio { get; set; }
     /// <summary>Optional banner image (png/jpg/webp, ideally 16:9) inside the addon's own repo, e.g. "Media/banner.webp".</summary>
     public string? Banner { get; set; }
+    /// <summary>Release day ("yyyy-mm-dd"). For about two weeks after it, each friend sees once the big "Chegou addon novo!" announcement.</summary>
+    public string? Lancado { get; set; }
 
     public List<FolderMap> Folders() => Pastas is { Count: > 0 }
         ? Pastas

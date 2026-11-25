@@ -286,6 +286,7 @@
           $("wow-warning").hidden = !m.wowRunning;
           renderItems();
           setBusy(false);
+          if (window.lontraxChegou) window.lontraxChegou(items);
           break;
         case "progress": {
           if (fight.on) endFight();
@@ -371,10 +372,12 @@
       { id: "tomtom", nome: "TomTom", descricao: "Setas de navegação e coordenadas.", tags: ["Mapa"], status: "atualizado", instalado: { data: "09/11/2026 20:10" }, novo: { msg: "v4.4.1", data: "01/11/2026 10:00" } },
       { id: "openmap", nome: "OpenMap", descricao: "Mapa do mundo turbinado.", tags: ["Mapa"], status: "nao_instalado", novo: { msg: "v0.8.2", data: "08/11/2026 18:30" } },
       { id: "x", nome: "Addon secreto", descricao: "Ainda sem convite.", status: "erro", erro: "Sem acesso (aceitou o convite do repositório?)." },
+      { id: "lontraxmap", nome: "Lontrax Map - Mapa com zoom", descricao: "Mapa do mundo com zoom, alfinetes das missões e o caminho até elas.", tags: ["Mapa"], status: "nao_instalado", lancado: new Date().toISOString().slice(0, 10), temBanner: true, banner: "natal-caixa.png" },
     ];
     $("banner").hidden = false;
     $("banner-text").textContent = "Nova versão do MF com a 1.3.4 oficial! Clique em Atualizar tudo.";
     renderItems();
+    setTimeout(() => window.lontraxChegou && window.lontraxChegou(items), 300);
   }
 
   // ---------- Lontrinha vs murloc ----------
