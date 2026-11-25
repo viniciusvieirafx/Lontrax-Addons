@@ -181,21 +181,6 @@
         "Grupo"
       ],
       "obrigatorio": false
-    },
-    {
-      "id": "openmap",
-      "nome": "Lontrax Map - Mapa com zoom (OpenMap)",
-      "descricao": "O mundo todo num mapa só: as zonas emendadas, com zoom contínuo, busca de lugar, masmorras, voos e missões. É o motor do OpenMap sem os botões e sem a parte que mandava mensagens para a guilda; os botões ficam na barra do Lontrax Map. Download grande (~180 MB).",
-      "repo": "LontraxWoW/OpenMap-amigos",
-      "ref": "main",
-      "pasta": "OpenMap",
-      "banner": "banner.webp",
-      "autor": "OpenMap (versão da galera)",
-      "tags": [
-        "Mapa",
-        "Interface"
-      ],
-      "obrigatorio": false
     }
   ]
 }
