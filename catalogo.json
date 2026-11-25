@@ -166,6 +166,36 @@
         "PvP"
       ],
       "obrigatorio": false
+    },
+    {
+      "id": "lontraxmap",
+      "nome": "Lontrax Map - Marcas, pings e amigos",
+      "descricao": "Marque lugares no mapa, mande pings e veja onde estão os amigos que aceitarem, só para o seu grupo e amigos escolhidos (nunca a guilda inteira). Marcas recebidas sempre perguntam antes. Botões no canto do mapa (M) ou /lmap.",
+      "repo": "LontraxWoW/LontraxMap",
+      "ref": "main",
+      "pasta": "LontraxMap",
+      "banner": "banner.webp",
+      "autor": "Lontrax",
+      "tags": [
+        "Mapa",
+        "Grupo"
+      ],
+      "obrigatorio": false
+    },
+    {
+      "id": "openmap",
+      "nome": "OpenMap (galera) - Mapa com zoom",
+      "descricao": "O mundo todo num mapa só: as zonas emendadas, com zoom contínuo. Versão da galera sem a parte que mandava mensagens para a guilda inteira (marcas, pings e amigos ficam com o Lontrax Map). Download grande (~180 MB).",
+      "repo": "LontraxWoW/OpenMap-amigos",
+      "ref": "main",
+      "pasta": "OpenMap",
+      "banner": "banner.webp",
+      "autor": "OpenMap (versão da galera)",
+      "tags": [
+        "Mapa",
+        "Interface"
+      ],
+      "obrigatorio": false
     }
   ]
 }
