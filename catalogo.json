@@ -182,6 +182,22 @@
         "Grupo"
       ],
       "obrigatorio": false
+    },
+    {
+      "id": "lontracheck",
+      "nome": "Lontra Check - Recarga das habilidades",
+      "descricao": "Mostra os segundos da recarga em cima de cada habilidade. Se você apertar uma magia que ainda não voltou, aparece na tela o ícone dela e o tempo que falta. Funciona só de instalar; opções em /lc.",
+      "repo": "LontraxWoW/LontraCheck",
+      "ref": "main",
+      "pasta": "LontraCheck",
+      "banner": "banner.webp",
+      "lancado": "2026-11-26",
+      "autor": "Lontrax",
+      "tags": [
+        "Interface",
+        "Combate"
+      ],
+      "obrigatorio": false
     }
   ]
 }
