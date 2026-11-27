@@ -670,8 +670,15 @@ sealed class Market
         {
             var from = l[^1][0] - 7 * 24;
             var mins = l.Where(x => x[0] >= from && x[1] > 0).Select(x => x[1]).OrderBy(x => x).ToList();
-            // Only a real spike is cut: prices swing a lot during the week, so up to 2x the usual is normal.
-            if (mins.Count >= 4) unit = Math.Min(unit, Math.Max(1, mins[mins.Count / 2] * 2 - 1));
+            // Only a real spike is cut: prices swing a lot during the week, so up to 2x the usual is normal,
+            // and a price that already held for the last day (median of the last 24h) is the new normal.
+            if (mins.Count >= 4)
+            {
+                var cap = mins[mins.Count / 2] * 2;
+                var day = l.Where(x => x[0] >= l[^1][0] - 24 && x[1] > 0).Select(x => x[1]).OrderBy(x => x).ToList();
+                if (day.Count >= 3) cap = Math.Max(cap, day[day.Count / 2]);
+                unit = Math.Min(unit, Math.Max(1, cap - 1));
+            }
         }
         return unit;
     }
