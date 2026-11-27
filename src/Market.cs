@@ -659,7 +659,7 @@ sealed class Market
     }
 
     /// <summary>What one unit really sells for, not what the cheapest seller is asking: 1 copper under the
-    /// cheapest listing (to be the first one bought), and never above the typical cheapest price of the last
+    /// cheapest listing (to be the first one bought), and never above twice the typical cheapest price of the last
     /// 7 days (median), so a price that spiked now or one lonely listing at a crazy price doesn't count.</summary>
     public long? SellUnit(int house, int item, Price? p)
     {
@@ -670,7 +670,8 @@ sealed class Market
         {
             var from = l[^1][0] - 7 * 24;
             var mins = l.Where(x => x[0] >= from && x[1] > 0).Select(x => x[1]).OrderBy(x => x).ToList();
-            if (mins.Count >= 4) unit = Math.Min(unit, Math.Max(1, mins[mins.Count / 2] - 1));
+            // Only a real spike is cut: prices swing a lot during the week, so up to 2x the usual is normal.
+            if (mins.Count >= 4) unit = Math.Min(unit, Math.Max(1, mins[mins.Count / 2] * 2 - 1));
         }
         return unit;
     }

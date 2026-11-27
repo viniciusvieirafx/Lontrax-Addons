@@ -321,12 +321,12 @@
     h += `<h5>Conta</h5><div class="kv">
       <span class="k">Custo dos materiais</span><span>${noCost() ? '<span class="flat">ignorado (já tenho)</span>' : r.completo ? money(r.custo) : "incompleto"}</span>
       <span class="k">Mais barato na AH agora</span><span>${money(r.vendaAgora ?? r.venda)}</span>
-      <span class="k" title="1 cobre abaixo do mais barato, e nunca acima do mais barato normal dos últimos 7 dias">Você vende por (realista)</span><span>${money(r.venda)}</span>
+      <span class="k" title="1 cobre abaixo do mais barato, e nunca acima do dobro do mais barato normal dos últimos 7 dias">Você vende por (realista)</span><span>${money(r.venda)}</span>
       <span class="k">Taxa da AH (5%)</span><span>${money(fee == null ? null : -fee)}</span>
       <span class="k total">Lucro por craft</span><span class="total ${r.lucro > 0 ? "pos" : "neg"}">${money(r.lucro)}</span>
     </div>`;
     const spike = r.vendaAgora != null && r.venda != null && r.venda < r.vendaAgora * 0.9;
-    h += `<p class="note">${r.aVenda} à venda em ${r.anuncios} anúncio(s).${spike ? " O preço de agora está acima do normal dos últimos dias, então a conta usa o preço normal." : ""}${r.aVenda < 3 ? " Pouca oferta: o preço pode ser de uma pessoa só, venda com cuidado." : ""}</p>`;
+    h += `<p class="note">${r.aVenda} à venda em ${r.anuncios} anúncio(s).${spike ? " O preço de agora está muito acima do normal dos últimos dias (mais que o dobro), então a conta usa um preço mais seguro." : ""}${r.aVenda < 3 ? " Pouca oferta: o preço pode ser de uma pessoa só, venda com cuidado." : ""}</p>`;
     h += `<h5>Preço nos últimos dias</h5><div id="ah-chart">${chart(history.item === r.item ? history.pontos : null)}</div>`;
     h += `<p class="note">"Mercado" é a média dos 15% mais baratos (ignora um anúncio isolado muito barato). Materiais de NPC usam o preço do vendedor.</p>`;
     d.innerHTML = h;
