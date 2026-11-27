@@ -202,7 +202,7 @@ static class Bags
             var qtd = g.Sum(x => x.qtd);
             Price? p = null;
             snap?.Prices.TryGetValue(it.id, out p);
-            long? ahUnit = p?.Min;
+            long? ahUnit = market.SellUnit(house, it.id, p);
             var net = ahUnit == null ? 0 : (long)(ahUnit.Value * (1 - Market.AhCut));
             string onde;
             long ganho;

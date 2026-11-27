@@ -658,11 +658,28 @@ sealed class Market
         return peak > 0 ? (int)peak : null;
     }
 
+    /// <summary>What one unit really sells for, not what the cheapest seller is asking: 1 copper under the
+    /// cheapest listing (to be the first one bought), and never above the typical cheapest price of the last
+    /// 7 days (median), so a price that spiked now or one lonely listing at a crazy price doesn't count.</summary>
+    public long? SellUnit(int house, int item, Price? p)
+    {
+        if (p == null || p.Min <= 0) return null;
+        var unit = Math.Max(1, p.Min - 1);
+        var l = ItemHistory(house, item);
+        if (l.Count > 0)
+        {
+            var from = l[^1][0] - 7 * 24;
+            var mins = l.Where(x => x[0] >= from && x[1] > 0).Select(x => x[1]).OrderBy(x => x).ToList();
+            if (mins.Count >= 4) unit = Math.Min(unit, Math.Max(1, mins[mins.Count / 2] - 1));
+        }
+        return unit;
+    }
+
     // ---------- profit ----------
     public sealed record ReagentRow(int id, string nome, int qtd, long? preco, string fonte, int aVenda);
     public sealed record Row(int receita, string nome, string profissao, string categoria, int item, double qtdFeita,
         long custo, long? venda, long? vendaMercado, long? lucro, double? margem, int aVenda, int anuncios,
-        long? ontem, bool completo, List<ReagentRow> materiais, int? estoquePico);
+        long? ontem, bool completo, List<ReagentRow> materiais, int? estoquePico, long? vendaAgora);
 
     public List<Row> Compute(int house, IEnumerable<int> professionIds)
     {
@@ -687,14 +704,16 @@ sealed class Market
                     mats.Add(new ReagentRow(g.Id, g.Name, g.Qty, unit, src, p?.Qty ?? 0));
                 }
                 snap.Prices.TryGetValue(r.Item, out var outP);
-                long? sell = outP == null ? null : (long)(outP.Min * r.Qty);
+                var sellUnit = SellUnit(house, r.Item, outP);
+                long? sell = sellUnit == null ? null : (long)(sellUnit.Value * r.Qty);
+                long? sellNow = outP == null ? null : (long)(outP.Min * r.Qty);
                 long? sellMkt = outP == null ? null : (long)(outP.Market * r.Qty);
                 long? profit = sell == null || !complete ? null : (long)(sell.Value * (1 - AhCut)) - cost;
                 double? margin = profit == null || cost <= 0 ? null : (double)profit.Value / cost;
                 var day = outP == null ? null : DayAgo(house, r.Item);
                 rows.Add(new Row(r.Id, r.ItemName.Length > 0 ? r.ItemName : r.Name, prof.Name, r.Category, r.Item, r.Qty,
                     cost, sell, sellMkt, profit, margin, outP?.Qty ?? 0, outP?.Listings ?? 0, day == null ? null : (long)(day.Value * r.Qty), complete, mats,
-                    outP == null ? null : PeakQty(house, r.Item)));
+                    outP == null ? null : PeakQty(house, r.Item), sellNow));
             }
         return rows;
     }
