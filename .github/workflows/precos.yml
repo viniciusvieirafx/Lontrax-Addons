@@ -1,4 +1,4 @@
-# De hora em hora: baixa os preços da Casa de Leilões do WoW Forever com a chave da Blizzard guardada
+# A cada 15 minutos (num job que fica ligado ~6h): baixa os preços da Casa de Leilões do WoW Forever com a chave da Blizzard guardada
 # como segredo (BLIZZARD_CLIENT_ID / BLIZZARD_CLIENT_SECRET) e publica no ramo "precos".
 # O app Lontrax Addons lê de lá, então a galera não precisa de chave própria.
 name: Precos da AH
@@ -18,7 +18,7 @@ concurrency:
 jobs:
   precos:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 358
     steps:
       - uses: actions/checkout@v4
 
@@ -35,21 +35,42 @@ jobs:
             git show FETCH_HEAD:amigos.json > "$RUNNER_TEMP/amigos.json" || true
           fi
 
-      - name: Baixa os preços
+      # O GitHub atrasa muito os agendamentos (às vezes 7-10 horas entre um e outro), então cada execução fica
+      # ligada quase 6 horas: confere a Blizzard a cada 15 minutos e publica sempre que vierem preços novos.
+      # A próxima execução agendada fica na fila (concurrency) e assume quando esta terminar.
+      - name: Baixa e publica os preços (repete por quase 6 horas)
         env:
           AMIGOS: ${{ runner.temp }}/amigos.json
           BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
           BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
-        run: python3 tools/precos.py "$RUNNER_TEMP/precos" "$RUNNER_TEMP/anterior"
-
-      - name: Publica no ramo precos (um commit só, sem acumular histórico)
-        env:
           TOKEN: ${{ github.token }}
+          RODAR_MINUTOS: ${{ github.event_name == 'workflow_dispatch' && '1' || '340' }}
         run: |
-          cd "$RUNNER_TEMP/precos"
-          git init -q -b precos
-          git config user.name "lontrax-precos"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -q -m "Preços $(date -u +%Y-%m-%dT%H:%MZ)"
-          git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" precos
+          fim=$(( $(date +%s) + RODAR_MINUTOS * 60 ))
+          anterior="$RUNNER_TEMP/anterior"
+          ultimo=""
+          n=0
+          while :; do
+            n=$((n + 1))
+            saida="$RUNNER_TEMP/precos-$n"
+            if python3 tools/precos.py "$saida" "$anterior"; then
+              atual=$(jq -c '[.casas[].atualizado]' "$saida/resumo.json")
+              if [ "$atual" != "$ultimo" ]; then
+                ( cd "$saida"
+                  git init -q -b precos
+                  git config user.name "lontrax-precos"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git add -A
+                  git commit -q -m "Preços $(date -u +%Y-%m-%dT%H:%MZ)"
+                  git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" precos ) \
+                  && { echo "publicado ($atual)"; ultimo="$atual"; anterior="$saida"; }
+              else
+                echo "Blizzard ainda não tem preços novos"
+                rm -rf "$saida"
+              fi
+            else
+              echo "falhou, tento de novo daqui a pouco"
+            fi
+            [ $(( $(date +%s) + 15 * 60 )) -lt "$fim" ] || break
+            sleep 900
+          done
