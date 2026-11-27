@@ -198,6 +198,22 @@
         "Combate"
       ],
       "obrigatorio": false
+    },
+    {
+      "id": "facelax",
+      "nome": "FaceLax - Rede social da galera",
+      "descricao": "Um celularzinho medieval dentro do jogo: poste, curta e comente com os amigos (e veja as lendas do WoW postando bobagens). Tudo some em 48 horas. Funciona só de instalar; abra pelo minimapa ou com /fl.",
+      "repo": "LontraxWoW/FaceLax",
+      "ref": "main",
+      "pasta": "FaceLax",
+      "banner": "banner.webp",
+      "lancado": "2026-11-27",
+      "autor": "Lontrax",
+      "tags": [
+        "Social",
+        "Chat"
+      ],
+      "obrigatorio": false
     }
   ]
 }
